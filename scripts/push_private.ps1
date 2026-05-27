@@ -17,8 +17,9 @@ if ($trackedEnv) {
 $remoteUrl = "https://github.com/$GitHubUser/$RepoName.git"
 Write-Host "Target: $remoteUrl (private repo must exist on GitHub first)"
 
-$existing = git remote get-url origin 2>$null
-if ($LASTEXITCODE -eq 0) {
+$hasOrigin = (git remote) -contains "origin"
+if ($hasOrigin) {
+    $existing = git remote get-url origin
     if ($existing -ne $remoteUrl) {
         Write-Host "Updating origin from $existing"
         git remote set-url origin $remoteUrl
