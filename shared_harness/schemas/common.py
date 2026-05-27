@@ -18,3 +18,27 @@ class BoundaryDecision(BaseModel):
 
 class CriticVerdict(BaseModel):
     passed: bool
+
+
+class AgentAction(BaseModel):
+    """LLM-planned next action for the browser agent."""
+
+    done: bool = Field(
+        description="True if the task is already complete based on current page state."
+    )
+    action: str = Field(
+        default="none",
+        description="Action type: click | type | scroll | press_key | navigate | none",
+    )
+    selector: str = Field(
+        default="",
+        description="CSS selector, role/name, or text content to target.",
+    )
+    value: str = Field(
+        default="",
+        description="Text to type, key to press, or URL to navigate to.",
+    )
+    reasoning: str = Field(
+        default="",
+        description="One-sentence explanation of why this action advances the task.",
+    )
