@@ -50,12 +50,16 @@ Local secrets live in **`.env`** at repo root (gitignored). `shared_harness/env.
 
 Zeabur: single Docker service, Streamlit multi-page.
 
+**Base URL** (fill after deploy): `https://<your-app>.zeabur.app`
+
 | Page | Task | URL Path |
 |------|------|----------|
 | Home | Overview | `/` |
 | **SEC 10K** | Task 2 — 10-K extraction | Sidebar → SEC 10K |
 | **Browser Agent** | Task 1 — browser automation | Sidebar → Browser Agent |
 | **Eval** | Dashboard (CSV) | Sidebar → Eval |
+
+**Private Git → Public before submit**: push to a private GitHub repo during development; change repo visibility to **Public** when emailing Whaleforce. See [SUBMISSION.md](SUBMISSION.md).
 
 Environment variables required for demo:
 - `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) — Gemini primary
