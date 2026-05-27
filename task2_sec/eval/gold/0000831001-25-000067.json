@@ -1,40 +1,75 @@
 {
   "accession": "0000831001-25-000067",
   "items": {
-    "1": {
-      "start": 119,
-      "end": 314,
-      "status": "extracted"
-    },
     "1A": {
-      "start": 314,
-      "end": 504,
+      "start": 174024,
+      "end": 1254168,
       "status": "extracted"
     },
     "1B": {
-      "start": 504,
-      "end": 547,
+      "start": 4265,
+      "end": 4312,
+      "status": "extracted"
+    },
+    "1C": {
+      "start": 4312,
+      "end": 4773,
       "status": "extracted"
     },
     "7": {
-      "start": 547,
-      "end": 808,
+      "start": 17131,
+      "end": 174024,
+      "status": "extracted"
+    },
+    "7A": {
+      "start": 4773,
+      "end": 4871,
       "status": "extracted"
     },
     "8": {
-      "start": 808,
-      "end": 1023,
+      "start": 4871,
+      "end": 4928,
+      "status": "extracted"
+    },
+    "9": {
+      "start": 4928,
+      "end": 5034,
+      "status": "extracted"
+    },
+    "9A": {
+      "start": 5034,
+      "end": 5199,
       "status": "extracted"
     },
     "10": {
-      "start": 1023,
-      "end": 1235,
+      "start": 5199,
+      "end": 5269,
+      "status": "incorporated_by_reference"
+    },
+    "11": {
+      "start": 5269,
+      "end": 5301,
+      "status": "incorporated_by_reference"
+    },
+    "12": {
+      "start": 5301,
+      "end": 5406,
+      "status": "incorporated_by_reference"
+    },
+    "13": {
+      "start": 5406,
+      "end": 5491,
       "status": "incorporated_by_reference"
     },
     "14": {
-      "start": 1839,
-      "end": 2033,
+      "start": 5491,
+      "end": 5551,
       "status": "incorporated_by_reference"
+    },
+    "15": {
+      "start": 5551,
+      "end": 17131,
+      "status": "extracted"
     }
   }
 }

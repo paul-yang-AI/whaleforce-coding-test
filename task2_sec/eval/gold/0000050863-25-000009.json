@@ -2,33 +2,113 @@
   "accession": "0000050863-25-000009",
   "items": {
     "1": {
-      "start": 118,
-      "end": 372,
+      "start": 468311,
+      "end": 468506,
       "status": "extracted"
     },
     "1A": {
-      "start": 372,
-      "end": 537,
+      "start": 137453,
+      "end": 246366,
       "status": "extracted"
     },
     "1B": {
-      "start": 537,
-      "end": 590,
+      "start": 468506,
+      "end": 468572,
       "status": "extracted"
     },
     "1C": {
-      "start": 590,
-      "end": 694,
+      "start": 252554,
+      "end": 272888,
+      "status": "extracted"
+    },
+    "2": {
+      "start": 468572,
+      "end": 468604,
+      "status": "extracted"
+    },
+    "3": {
+      "start": 468604,
+      "end": 468643,
+      "status": "extracted"
+    },
+    "4": {
+      "start": 468643,
+      "end": 468690,
+      "status": "extracted"
+    },
+    "5": {
+      "start": 468690,
+      "end": 468825,
+      "status": "extracted"
+    },
+    "6": {
+      "start": 468825,
+      "end": 469161,
       "status": "extracted"
     },
     "7": {
-      "start": 694,
-      "end": 944,
+      "start": 65158,
+      "end": 137453,
+      "status": "extracted"
+    },
+    "7A": {
+      "start": 246366,
+      "end": 252554,
       "status": "extracted"
     },
     "8": {
-      "start": 944,
-      "end": 1144,
+      "start": 469161,
+      "end": 469227,
+      "status": "extracted"
+    },
+    "9": {
+      "start": 469227,
+      "end": 469361,
+      "status": "extracted"
+    },
+    "9A": {
+      "start": 272888,
+      "end": 468311,
+      "status": "extracted"
+    },
+    "9B": {
+      "start": 469361,
+      "end": 469577,
+      "status": "extracted"
+    },
+    "10": {
+      "start": 469577,
+      "end": 469655,
+      "status": "extracted"
+    },
+    "11": {
+      "start": 469655,
+      "end": 469692,
+      "status": "extracted"
+    },
+    "12": {
+      "start": 469692,
+      "end": 469801,
+      "status": "extracted"
+    },
+    "13": {
+      "start": 469801,
+      "end": 469889,
+      "status": "extracted"
+    },
+    "14": {
+      "start": 469889,
+      "end": 469951,
+      "status": "extracted"
+    },
+    "15": {
+      "start": 469951,
+      "end": 470026,
+      "status": "extracted"
+    },
+    "16": {
+      "start": 470026,
+      "end": 472294,
       "status": "extracted"
     }
   }

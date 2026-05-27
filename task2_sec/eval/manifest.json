@@ -25,7 +25,8 @@
       "url": "https://www.sec.gov/Archives/edgar/data/831001/000083100125000067/c-20241231.htm",
       "label": "incorporation_by_reference",
       "split": "train",
-      "stress": ["items_10_14_reference"]
+      "stress": ["items_10_14_reference"],
+      "required_items": ["1A", "7", "8"]
     },
     {
       "ticker": "BRK.B",

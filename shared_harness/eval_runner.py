@@ -127,7 +127,7 @@ def evaluate_filing(
         use_arbiter=use_arbiter,
     )
 
-    required = required_items or filing.get("required_items") or ["1", "1A", "7", "8"]
+    required = filing.get("required_items") or required_items or ["1", "1A", "7", "8"]
     by_id = {item.item_id: item for item in extraction.items}
     required_found = sum(
         1 for item_id in required if item_id in by_id and _item_satisfied(by_id[item_id].status)

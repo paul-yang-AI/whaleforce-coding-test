@@ -87,8 +87,8 @@ def _http_get(url: str) -> httpx.Response:
 def resolve_filing_url(accession: str, cik: str | None = None) -> str:
     """Resolve the primary 10-K HTML document URL from EDGAR filing index.
 
-    Tries the EDGAR filing index page and finds the largest .htm file,
-    which is typically the main 10-K document.
+    Parses the EDGAR filing index and identifies the main filing document
+    by filtering out navigation links, exhibits, and iXBRL viewer wrappers.
     """
     accession_nodash = accession.replace("-", "")
     if cik:
@@ -105,8 +105,10 @@ def resolve_filing_url(accession: str, cik: str | None = None) -> str:
     response = _http_get(index_url)
     html = response.text
 
+    base_path = f"/Archives/edgar/data/{cik_clean}/{accession_nodash}/"
+
     htm_links = re.findall(
-        r'href="([^"]+\.htm)"',
+        r'href="([^"]+\.htm[l]?)"',
         html,
         re.IGNORECASE,
     )
@@ -115,24 +117,55 @@ def resolve_filing_url(accession: str, cik: str | None = None) -> str:
             f"No .htm documents found in filing index: {index_url}"
         )
 
-    base_path = f"/Archives/edgar/data/{cik_clean}/{accession_nodash}/"
-    candidates = []
+    filing_docs: list[str] = []
     for link in htm_links:
-        if link.startswith("/"):
+        # Handle /ix?doc= iXBRL viewer links — extract the actual document path
+        ix_match = re.search(r"/ix\?doc=(.+)$", link)
+        if ix_match:
+            doc_path = ix_match.group(1)
+            filing_docs.append(f"https://www.sec.gov{doc_path}")
+            continue
+
+        # Skip site navigation and non-filing links
+        if link in ("/index.htm", "/index.html"):
+            continue
+        if "/searchedgar/" in link or "/edgar/searchedgar" in link:
+            continue
+        if "-index" in link:
+            continue
+        if "R1.htm" in link or "R2.htm" in link:
+            continue
+        # Skip exhibits
+        if "-exh" in link.lower() or "exhibit" in link.lower():
+            continue
+
+        # Build full URL
+        if link.startswith("/Archives/"):
             full = f"https://www.sec.gov{link}"
+        elif link.startswith("/"):
+            continue  # Other absolute paths are site links, not filing docs
         elif link.startswith("http"):
             full = link
         else:
             full = f"https://www.sec.gov{base_path}{link}"
-        if "-index" not in link and "R1.htm" not in link and "R2.htm" not in link:
-            candidates.append(full)
 
-    if not candidates:
-        candidates = [f"https://www.sec.gov{base_path}{htm_links[0]}"]
+        filing_docs.append(full)
 
-    filing_url = candidates[0]
-    logger.info("Resolved filing URL: %s", filing_url)
-    return filing_url
+    if not filing_docs:
+        raise EdgarClientError(
+            f"Could not identify filing document in index: {index_url}"
+        )
+
+    # Prefer the main 10-K document: typically named {ticker}-{date}.htm
+    # and is the first document (not _d2, _d3 which are supplementary)
+    primary = filing_docs[0]
+    for doc in filing_docs:
+        if "_d2" not in doc and "_d3" not in doc:
+            primary = doc
+            break
+
+    logger.info("Resolved filing URL: %s", primary)
+    return primary
 
 
 def fetch_filing_html(

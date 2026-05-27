@@ -10,6 +10,17 @@ HEADER_PREFIX_LEN = 200
 
 HEADER_RE = re.compile(r"Item\s+[\dA-Z]+", re.IGNORECASE)
 
+# Recognized section titles that serve as headers in filings without "Item N" format
+_SECTION_TITLE_RE = re.compile(
+    r"(?:Risk\s+Factors|Unresolved\s+Staff|Cybersecurity|Management.s\s+Discussion|"
+    r"Quantitative\s+and\s+Qualitative|Financial\s+Statements|Controls\s+and\s+Procedures|"
+    r"Directors[,\s]+Executive|Executive\s+Compensation|Security\s+Ownership|"
+    r"Certain\s+Relationships|Principal\s+Account|Exhibits?\s+and\s+Financial|"
+    r"Form\s+10-K\s+Summary|Changes\s+in\s+and\s+Disagreements|Properties|"
+    r"Legal\s+Proceedings|Business)",
+    re.IGNORECASE,
+)
+
 
 @dataclass
 class MetricsResult:
@@ -31,7 +42,7 @@ def token_ratio(input_len: int, output_len: int) -> float:
 
 def check_header_retention(text: str, item_id: str) -> bool:
     prefix = text[:HEADER_PREFIX_LEN]
-    return bool(HEADER_RE.search(prefix))
+    return bool(HEADER_RE.search(prefix) or _SECTION_TITLE_RE.search(prefix))
 
 
 def evaluate_segment_metrics(
