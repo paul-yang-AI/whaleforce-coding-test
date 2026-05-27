@@ -202,20 +202,26 @@ def run(
                     # Action step passed verification — continue to next LLM plan
                     continue
 
-            # Verify failed — attempt recovery
-            recovery_ok = _attempt_recovery(
-                step=step,
-                step_index=step_idx,
-                run_id=run_id,
-                task_description=task_description,
-                executor=executor,
-                cancel_event=cancel_event,
-                result=result,
-            )
-            if not recovery_ok:
-                result.status = "failed"
-                result.error = f"Recovery exhausted at step {step_idx}: {step.verify.reason}"
-                break
+            if step_idx == 0:
+                # Step 0 (navigation) failed — attempt recovery
+                recovery_ok = _attempt_recovery(
+                    step=step,
+                    step_index=step_idx,
+                    run_id=run_id,
+                    task_description=task_description,
+                    executor=executor,
+                    cancel_event=cancel_event,
+                    result=result,
+                )
+                if not recovery_ok:
+                    result.status = "failed"
+                    result.error = f"Recovery exhausted at step {step_idx}: {step.verify.reason}"
+                    break
+            else:
+                # Action step (1+) verify failed — let LLM re-plan instead of recovery
+                # This avoids wasting steps on recovery when the page simply hasn't
+                # updated yet (e.g., after typing but before pressing Enter)
+                continue
         else:
             if result.status not in ("cancelled", "blocked"):
                 # Max steps reached without completion — extract whatever we can

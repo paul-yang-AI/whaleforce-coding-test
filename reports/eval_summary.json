@@ -6,9 +6,9 @@
   "agent_tasks": 6,
   "agent_success_rate": 0.5,
   "agent_silent_failures": 0,
-  "agent_recovery_total": 25,
-  "agent_llm_calls_total": 19,
-  "agent_latency_p50": 27.0,
-  "agent_latency_p95": 57.7,
-  "agent_usd_p50": 0.0059
+  "agent_recovery_total": 0,
+  "agent_llm_calls_total": 29,
+  "agent_latency_p50": 33.443638650060166,
+  "agent_latency_p95": 58.976824300014414,
+  "agent_usd_p50": 0.008328499999999999
 }

@@ -28,7 +28,12 @@ class AllProvidersFailed(Exception):
     """All LLM providers failed for this call."""
 
 
+_fallback_disabled_runtime: bool = False
+
+
 def _fallback_available(model: str) -> bool:
+    if _fallback_disabled_runtime:
+        return False
     if model.startswith("openrouter/") and not os.environ.get("OPENROUTER_API_KEY"):
         return False
     return True
@@ -172,4 +177,8 @@ def complete(
     except BudgetExceededError:
         raise
     except Exception as exc:
+        global _fallback_disabled_runtime
+        if "402" in str(exc) or "Insufficient credits" in str(exc):
+            _fallback_disabled_runtime = True
+            logger.warning("Fallback auto-disabled (no credits): %s", exc)
         raise AllProvidersFailed(str(exc)) from exc

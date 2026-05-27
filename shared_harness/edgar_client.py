@@ -194,7 +194,16 @@ def fetch_filing_html(
     if not url:
         url = resolve_filing_url(accession, cik=cik)
 
-    response = _http_get(url)
+    try:
+        response = _http_get(url)
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 404:
+            logger.warning("URL returned 404, resolving from EDGAR index: %s", url)
+            url = resolve_filing_url(accession, cik=cik)
+            response = _http_get(url)
+        else:
+            raise
+
     html = response.text
     path.write_text(html, encoding="utf-8")
     return html

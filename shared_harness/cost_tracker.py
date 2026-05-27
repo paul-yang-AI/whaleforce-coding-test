@@ -17,7 +17,7 @@ class BudgetLimits:
     global_budget_usd: float = 20.0
     per_run_agent_usd: float = 0.50
     per_run_filing_usd: float = 0.30
-    max_llm_calls_agent: int = 5
+    max_llm_calls_agent: int = 8
     max_llm_calls_filing: int = 3
 
 
