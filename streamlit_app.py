@@ -1,5 +1,9 @@
 """Whaleforce Streamlit multi-page app."""
 
+from shared_harness.env import load_env
+
+load_env()
+
 import streamlit as st
 
 st.set_page_config(page_title="Whaleforce", page_icon="🐋", layout="wide")

@@ -10,11 +10,13 @@ Monorepo: Browser Agent (task1) + SEC 10-K extraction (task2) + shared harness.
 python -m venv .venv
 .venv\Scripts\activate          # Windows
 pip install -r requirements.txt
-playwright install chromium
-set SEC_USER_AGENT=WhaleforceCodingTest YourName you@email.com
+copy .env.example .env          # then edit .env with your keys
 pytest -m unit
+python scripts/smoke_llm_models.py   # optional: verify LLM model IDs
 streamlit run streamlit_app.py
 ```
+
+Local secrets live in **`.env`** at repo root (gitignored). `shared_harness/env.py` loads it for Streamlit, pytest, and scripts. Existing shell env vars take precedence over `.env`.
 
 ## Deployment
 

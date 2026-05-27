@@ -3,10 +3,18 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
+
+_ROOT = Path(__file__).resolve().parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
+from shared_harness.env import load_env
 
 
 def main() -> None:
+    load_env()
     parser = argparse.ArgumentParser()
     parser.add_argument("--split", default="train")
     parser.add_argument("--output", default="reports")
