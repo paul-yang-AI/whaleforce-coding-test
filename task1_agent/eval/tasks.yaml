@@ -1,2 +1,61 @@
-# Phase 2 eval tasks — expand to 6-8 on Day 6
-tasks: []
+tasks:
+  - id: smoke_example_title
+    domain: example.com
+    task_type: navigate
+    description: "Navigate to example.com and verify the page title contains 'Example Domain'."
+    start_url: https://example.com
+    split: train
+    smoke_only: true
+
+  - id: smoke_httpbin_headers
+    domain: httpbin.org
+    task_type: extract
+    description: "Navigate to httpbin.org/headers and extract the User-Agent value from the JSON response."
+    start_url: https://httpbin.org/headers
+    split: train
+    smoke_only: true
+
+  - id: wikipedia_search
+    domain: wikipedia.org
+    task_type: search
+    description: "Go to en.wikipedia.org, search for 'Alan Turing', verify the article page loads."
+    start_url: https://en.wikipedia.org
+    split: train
+    target_failure: ELEMENT_NOT_FOUND
+
+  - id: github_navigate_repo
+    domain: github.com
+    task_type: navigate
+    description: "Navigate to github.com/python/cpython and verify the repository title is visible."
+    start_url: https://github.com
+    split: train
+    target_failure: TIMEOUT
+
+  - id: hacker_news_top
+    domain: news.ycombinator.com
+    task_type: extract
+    description: "Go to Hacker News and extract the title of the #1 ranked story."
+    start_url: https://news.ycombinator.com
+    split: train
+
+  - id: duckduckgo_search
+    domain: duckduckgo.com
+    task_type: search
+    description: "Search DuckDuckGo for 'playwright browser automation' and verify results appear."
+    start_url: https://duckduckgo.com
+    split: train
+    target_failure: ACTION_NO_EFFECT
+
+  - id: brkb_heldout_nav
+    domain: sec.gov
+    task_type: navigate
+    description: "Navigate to SEC EDGAR and search for Berkshire Hathaway filings."
+    start_url: https://www.sec.gov/cgi-bin/browse-edgar
+    split: heldout
+
+  - id: forms_heldout
+    domain: httpbin.org
+    task_type: form
+    description: "Submit a POST form on httpbin.org/forms/post with sample data."
+    start_url: https://httpbin.org/forms/post
+    split: heldout
