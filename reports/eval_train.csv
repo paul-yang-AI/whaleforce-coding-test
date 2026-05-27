@@ -1,0 +1,4 @@
+task,accession,ticker,cik,split,required_items_found,required_items_total,gold_items_matched,gold_items_total,gold_boundary_p95,toc_header_agreement,token_ratio_p50,char_coverage,tier0_extracted_count,incorporated_count,missing_count,low_confidence_count,usd_per_filing,fallback_used,failure_category
+sec_10k,0000789019-24-000045,MSFT,789019,train,4,4,6,6,0,1.0,0.9875,0.8718,8,0,14,0,0.0,False,ok
+sec_10k,0000050863-25-000009,INTC,50863,train,4,4,6,6,0,1.0,0.9899,0.8969,6,0,16,0,0.0,False,ok
+sec_10k,0000831001-25-000067,C,831001,train,4,4,7,7,0,0.5,0.9897,0.8837,5,5,12,0,0.0,False,ok

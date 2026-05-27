@@ -61,10 +61,10 @@ labels = [f"{f['ticker']} — {f['accession']} ({f.get('label', '')})" for f in 
 choice = st.selectbox("Select filing (train manifest)", labels, index=0)
 selected = filings[labels.index(choice)]
 
-accession = st.text_input("Accession (override)", value=selected["accession"])
 run = st.button("Extract", type="primary")
 
 if run:
+    accession = selected["accession"]
     with st.spinner(f"Extracting {accession}…"):
         try:
             html = fetch_filing_html(accession)

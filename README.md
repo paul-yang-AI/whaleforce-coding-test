@@ -40,12 +40,21 @@ See [prompts/ITERATION.md](prompts/ITERATION.md) for v1→v2 prompt changes.
 ## Tests
 
 ```bash
-pytest -m unit
-pytest -m integration
-pytest -m eval --split train   # via scripts/run_eval.py
+pytest -m unit                              # L1: deterministic, zero LLM
+pytest -m integration                       # L2: mock integration
+pytest -m eval                              # L3: manifest eval (uses cache fixtures)
+python scripts/run_eval.py --split train    # export reports/eval_train.csv
 ```
 
-Held-out split: local/demo only, not CI.
+Held-out split (`--split heldout`): local/demo only, not used for tuning.
+
+## Eval Fixtures
+
+The HTML files under `task2_sec/eval/cache/` are **synthetic 10-K fixtures** crafted to
+exercise the pipeline's TOC, regex fallback, iXBRL normalization, and incorporation-by-reference
+detection. They are intentionally committed for reproducible offline CI. For real-filing
+validation, supply a valid `SEC_USER_AGENT` and run with `--accession` pointing to a live
+EDGAR URL (cache-miss path).
 
 ## License
 

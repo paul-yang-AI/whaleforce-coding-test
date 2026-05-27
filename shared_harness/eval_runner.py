@@ -114,6 +114,7 @@ def evaluate_filing(
     gold_dir: Path | None = None,
     use_arbiter: bool = False,
     run_id: str | None = None,
+    required_items: list[str] | None = None,
 ) -> FilingEvalResult:
     accession = filing["accession"]
     html = fetch_filing_html(accession)
@@ -126,7 +127,7 @@ def evaluate_filing(
         use_arbiter=use_arbiter,
     )
 
-    required = filing.get("required_items") or load_manifest().get("required_items", [])
+    required = required_items or filing.get("required_items") or ["1", "1A", "7", "8"]
     by_id = {item.item_id: item for item in extraction.items}
     required_found = sum(
         1 for item_id in required if item_id in by_id and _item_satisfied(by_id[item_id].status)
@@ -206,8 +207,12 @@ def run_sec_eval(
     use_arbiter: bool = False,
 ) -> list[FilingEvalResult]:
     manifest = load_manifest(manifest_path)
+    required_items = manifest.get("required_items", ["1", "1A", "7", "8"])
     filings = [f for f in manifest["filings"] if f.get("split", "train") == split]
-    return [evaluate_filing(f, gold_dir=gold_dir, use_arbiter=use_arbiter) for f in filings]
+    return [
+        evaluate_filing(f, gold_dir=gold_dir, use_arbiter=use_arbiter, required_items=required_items)
+        for f in filings
+    ]
 
 
 def write_eval_csv(results: list[FilingEvalResult], output_path: Path) -> Path:
