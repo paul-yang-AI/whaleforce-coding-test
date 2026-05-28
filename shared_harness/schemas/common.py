@@ -16,10 +16,6 @@ class BoundaryDecision(BaseModel):
         return self
 
 
-class CriticVerdict(BaseModel):
-    passed: bool
-
-
 class AgentAction(BaseModel):
     """LLM-planned next action for the browser agent."""
 
@@ -58,3 +54,16 @@ class AgentAction(BaseModel):
         if self.result is None:
             self.result = ""
         return self
+
+
+class CriticVerdict(BaseModel):
+    passed: bool
+
+
+class PageExtraction(BaseModel):
+    """Single-shot extraction from visible page content."""
+
+    result: str = Field(
+        default="",
+        description="Answer copied or derived only from visible page text.",
+    )

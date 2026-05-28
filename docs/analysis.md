@@ -31,25 +31,27 @@ All numbers below come from **`reports/eval_train.csv`** (generated `2026-05-28`
 - **Silent failures**: **0** on latest train CSV (no success without extracted result on extract/search tasks).
 - **Held-out policy**: `tasks.yaml` heldout tasks + SEC BRK.B in `reports/heldout_snapshot.json` — not used for tuning.
 
-**Latest live eval (6 train tasks, Chromium headless + Gemini Tier1, no OPENROUTER key):**
+**Latest live eval (6 train tasks, Chromium headless + Gemini Tier1, Gemini-only UI):**
 
 | task_id | status | steps | llm_calls | usd | failure_category |
 |---------|--------|-------|-----------|-----|------------------|
-| smoke_example_title | success | 2 | 1 | $0.0005 | ok |
-| smoke_httpbin_headers | failed | 19 | 5 | $0.0058 | max_steps |
-| wikipedia_search | failed | 18 | 5 | $0.0127 | max_steps |
-| github_navigate_repo | success | 3 | 2 | $0.0060 | ok |
-| hacker_news_top | success | 2 | 1 | $0.0033 | ok |
-| duckduckgo_search | failed | 18 | 5 | $0.0137 | max_steps |
+| smoke_example_title | success | 2 | 1 | $0.0007 | ok |
+| smoke_httpbin_headers | success | 2 | 1 | $0.0015 | ok |
+| wikipedia_search | success | 3 | 2 | $0.0056 | ok |
+| github_navigate_repo | success | 3 | 2 | $0.0063 | ok |
+| hacker_news_top | success | 2 | 1 | $0.0035 | ok |
+| duckduckgo_search | failed | 15 | 12 | $0.0343 | max_steps |
 
 From `reports/eval_summary.json`:
-- **Success rate**: **3/6 (50%)**
+- **Success rate**: **5/6 (83%)**
 - **Silent failures**: **0**
-- **P50 latency**: **27.0s**; **P95**: **57.7s**
-- **P50 cost**: **$0.0059/task**
-- **Recovery steps (total)**: **25**
+- **P50 latency**: **10.6s**; **P95**: **12.8s**
+- **P50 cost**: **$0.0045/task**
+- **Recovery steps (total)**: **0**
 
-Navigate/extract tasks (example.com, HN, GitHub) succeed reliably. Multi-step search (Wikipedia, DuckDuckGo) often hits **max_steps=10** under Gemini-only (no OpenRouter fallback). Setting `OPENROUTER_API_KEY` improves resilience when primary JSON parse fails.
+Search tasks improved after generic harness fixes: step-0 navigation-only verify, type→Enter auto-submit on search/find tasks, `max_steps=15` for search. Wikipedia passes in 3 steps. DuckDuckGo still flaky (consent overlay / dynamic SERP DOM) — not ticker- or site-hardcoded.
+
+**Out of scope:** tasks like “summarize the page” fail because the agent extracts visible text only; generative summaries are rejected by `verify_extracted_result`. Planner errors (`503`) surface as `plan_failed` when Gemini is unavailable.
 
 ---
 
@@ -73,10 +75,10 @@ Navigate/extract tasks (example.com, HN, GitHub) succeed reliably. Multi-step se
 
 | failure_category | count |
 |------------------|-------|
-| ok | 3 |
-| max_steps | 3 |
+| ok | 5 |
+| max_steps | 1 |
 
-Top mitigation: classified recovery (not blind retry), `max_steps=10` circuit, optional OpenRouter fallback, Blind Critic terminal gate.
+Top mitigation: navigation-only step 0, type→Enter on search tasks, outcome verify at `done=true`, classified recovery on step 0 only.
 
 ---
 

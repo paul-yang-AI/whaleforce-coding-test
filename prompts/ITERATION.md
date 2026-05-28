@@ -245,3 +245,21 @@ Record v1→v2 changes with Failed Path / Resolution / Validation.
   3. `infer_max_steps()` from task verbs (search/form 15, extract 12, default 10)
   4. EDGAR search: ticker → company_tickers.json → submissions, then EFTS fallback
 - **Validation**: `tests/unit/test_agent_verify.py`.
+
+### `agent_search_harness` (2026-05-28)
+- **Failed path**: Wiki/DDG search hit max_steps; httpbin flaky; UI showed unused OpenRouter;
+  Gemini 503 → immediate `plan_failed`; summarize tasks out of scope.
+- **Resolution** (generic):
+  1. Step 0 uses `verify_navigation`; search/find tasks auto-press Enter after type
+  2. Generic consent-banner dismiss on landing (Accept/Agree button labels)
+  3. Gemini primary infra retry (3× with backoff) before fallback
+  4. UI: Gemini-only env checks; document summarize limitation
+- **Validation**: agent eval **5/6** train (Wiki OK, DDG flaky); `docs/analysis.md` updated.
+
+### `agent_extract_path` (2026-05-28)
+- **Failed path**: Extract/summarize tasks forced through multi-step action loop → plan_failed or hallucinated `done`.
+- **Resolution** (L2-inspired, generic):
+  1. `infer_task_mode()` routes extract vs act from task verbs
+  2. Extract path: navigate → one `PageExtraction` LLM call → `verify_task_outcome`
+  3. Planner context: head+tail page snippet (4k), a11y 8k; no-clarify prompt
+- **Validation**: unit tests + e2e task-mode smoke.

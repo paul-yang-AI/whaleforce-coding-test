@@ -89,3 +89,66 @@ def test_infer_max_steps_from_task_wording() -> None:
     assert infer_max_steps("Search DuckDuckGo for foo") == 15
     assert infer_max_steps("Extract the title from the page") == 12
     assert infer_max_steps("Go to example.com") == 10
+
+
+@pytest.mark.unit
+def test_task_implies_submit_generic_verbs() -> None:
+    from task1_agent.agent.browser import _task_implies_submit
+
+    assert _task_implies_submit("Search Wikipedia for 'Alan Turing'")
+    assert _task_implies_submit("Find the top story on HN")
+    assert not _task_implies_submit("Navigate to example.com and verify title")
+    assert not _task_implies_submit("Help summarize the page")
+
+
+@pytest.mark.unit
+def test_infer_task_mode_routing() -> None:
+    from task1_agent.agent.extract import infer_task_mode
+
+    assert infer_task_mode("Search Wikipedia for 'Alan Turing'") == "act"
+    assert infer_task_mode("Extract the User-Agent from the page") == "extract"
+    assert infer_task_mode("Go to Hacker News and find the title of the #1 story") == "extract"
+    assert infer_task_mode("Navigate to github.com/python/cpython and verify the repository title") == "act"
+    assert infer_task_mode("Help summarize the page") == "extract"
+
+
+@pytest.mark.unit
+def test_page_context_snippet_head_tail() -> None:
+    from task1_agent.agent.extract import page_context_snippet
+
+    long_text = "A" * 5000 + "UNIQUE_TAIL" + "B" * 5000
+    snippet = page_context_snippet(long_text, max_chars=1000)
+    assert snippet.startswith("A")
+    assert "truncated" in snippet
+
+
+@pytest.mark.unit
+def test_extract_path_after_navigate() -> None:
+    from unittest.mock import patch
+
+    from shared_harness import job_store
+    from task1_agent.agent.loop import StepResult, run
+    from task1_agent.agent.verify import VerifyResult
+
+    run_id = job_store.create_run("agent")
+
+    def executor(action: str, context: dict) -> StepResult:
+        return StepResult(
+            step_index=context.get("step", 0),
+            action=action,
+            url="https://example.com",
+            page_text="Example Domain\nThis domain is for use in illustrative examples in documents.",
+            a11y_tree="<heading>Example Domain</heading>",
+            verify=VerifyResult(passed=True),
+        )
+
+    with patch("task1_agent.agent.loop.extract_from_page", return_value="Example Domain"):
+        result = run(
+            task_description="Navigate to example.com and verify the page title contains Example Domain.",
+            start_url="https://example.com",
+            run_id=run_id,
+            execute_action=executor,
+        )
+    assert result.status == "success"
+    assert result.extracted_result == "Example Domain"
+    assert len(result.steps) == 2

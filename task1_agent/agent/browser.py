@@ -17,9 +17,37 @@ from playwright.sync_api import (
 from task1_agent.agent.dom_serialize import compress_a11y
 from task1_agent.agent.loop import StepResult
 from task1_agent.agent.recovery import FailureType, classify_failure
-from task1_agent.agent.verify import VerifyResult, verify_step
+from task1_agent.agent.verify import VerifyResult, verify_navigation, verify_step
 
 logger = logging.getLogger(__name__)
+
+_SUBMIT_TASK_VERBS = ("search", "find", "query")
+
+
+def _task_implies_submit(task: str) -> bool:
+    """Generic: typing in search/find tasks should submit (Enter), not site-specific."""
+    t = task.lower()
+    return any(w in t for w in _SUBMIT_TASK_VERBS)
+
+
+_CONSENT_BUTTON_RE = re.compile(
+    r"accept|agree|got it|continue|allow all|i understand|consent",
+    re.I,
+)
+
+
+def _try_dismiss_consent_banner(page: Page) -> None:
+    """Dismiss common cookie/consent overlays (generic button labels, not site-specific)."""
+    for role in ("button", "link"):
+        try:
+            locator = page.get_by_role(role, name=_CONSENT_BUTTON_RE)
+            if locator.count() > 0:
+                locator.first.click(timeout=2000)
+                page.wait_for_timeout(400)
+                return
+        except Exception:
+            pass
+
 
 _LAUNCH_ARGS = ["--disable-dev-shm-usage", "--no-sandbox"]
 _DEFAULT_TIMEOUT = 20000
@@ -140,6 +168,7 @@ class PlaywrightExecutor:
         page = self.page
         if step_index == 0 and start_url:
             page.goto(start_url, wait_until="domcontentloaded", timeout=self._timeout_ms)
+            _try_dismiss_consent_banner(page)
 
         page.wait_for_timeout(500)
         return self._observe(step_index, f"navigate:{start_url}", task, start_url)
@@ -159,6 +188,10 @@ class PlaywrightExecutor:
             self._do_click(page, selector)
         elif action_type == "type":
             self._do_type(page, selector, value)
+            if value and _task_implies_submit(task):
+                page.wait_for_timeout(300)
+                page.keyboard.press("Enter")
+                action_desc = f"{action_desc}+Enter"
         elif action_type == "scroll":
             page.evaluate("window.scrollBy(0, 400)")
         elif action_type == "press_key":
@@ -324,19 +357,23 @@ class PlaywrightExecutor:
 
         a11y = self._get_a11y_snapshot()
 
-        vr = verify_step(
-            url=url,
-            page_text=f"{title}\n{body_text}",
-            task=task,
-            start_url=start_url,
-            check_task_keywords=False,
-        )
+        page_content = f"{title}\n{body_text}"
+        if step_index == 0 and action_desc.startswith("navigate:"):
+            vr = verify_navigation(url=url, page_text=page_content, start_url=start_url)
+        else:
+            vr = verify_step(
+                url=url,
+                page_text=page_content,
+                task=task,
+                start_url=start_url,
+                check_task_keywords=False,
+            )
 
         return StepResult(
             step_index=step_index,
             action=action_desc,
             url=url,
-            page_text=body_text[:2000],
+            page_text=body_text[:5000],
             a11y_tree=a11y,
             verify=vr,
             failure_type=classify_failure(vr.reason) if not vr.passed else None,

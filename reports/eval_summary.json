@@ -2,5 +2,13 @@
   "sec_filings": 3,
   "sec_ok": 3,
   "sec_tier0_pct": 100.0,
-  "sec_usd_p50": 0.0
+  "sec_usd_p50": 0.0,
+  "agent_tasks": 6,
+  "agent_success_rate": 0.8333333333333334,
+  "agent_silent_failures": 0,
+  "agent_recovery_total": 0,
+  "agent_llm_calls_total": 19,
+  "agent_latency_p50": 10.577396400040016,
+  "agent_latency_p95": 12.78331289999187,
+  "agent_usd_p50": 0.0045325
 }

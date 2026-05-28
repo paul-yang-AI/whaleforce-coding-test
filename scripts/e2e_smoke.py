@@ -165,6 +165,21 @@ def check_agent_verify() -> bool:
         return False
 
 
+def check_agent_task_mode() -> bool:
+    """Verify extract vs act routing without browser."""
+    print("[Agent] Testing task mode routing...", end=" ")
+    try:
+        from task1_agent.agent.extract import infer_task_mode
+
+        assert infer_task_mode("Search DuckDuckGo for foo") == "act"
+        assert infer_task_mode("Extract the title from the page") == "extract"
+        print("OK")
+        return True
+    except Exception as exc:
+        print(f"FAIL — {exc}")
+        return False
+
+
 def main() -> None:
     load_env()
     print("=" * 60)
@@ -177,6 +192,7 @@ def main() -> None:
         "Agent Planning": check_agent_plan(),
         "PDF Detection": check_pdf_detection(),
         "Agent Verify": check_agent_verify(),
+        "Agent Task Mode": check_agent_task_mode(),
     }
 
     print()

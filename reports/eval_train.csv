@@ -2,3 +2,9 @@ task,record_id,domain,task_type,split,status,steps,elapsed_s,recovery_count,llm_
 sec_10k,0000950170-24-087843,MSFT,extract,train,ok,,,0,0,0,4,4,22,22,0,1.0,0.9994,0.9877,22,0,0,0,0.0,False,ok,
 sec_10k,0000050863-25-000009,INTC,extract,train,ok,,,0,0,0,4,4,22,22,0,0.7727,0.997,0.8612,17,5,0,0,0.0,False,ok,
 sec_10k,0000831001-25-000067,C,extract,train,ok,,,0,0,0,3,3,17,17,0,0.7059,0.9819,0.9964,12,5,5,0,0.0,False,ok,
+agent,smoke_example_title,example.com,navigate,train,success,2,5.91,0,1,0,,,,,,,,,,,,,0.000702,,ok,Example Domain
+agent,smoke_httpbin_headers,httpbin.org,extract,train,success,2,12.78,0,1,0,,,,,,,,,,,,,0.00147,,ok,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+agent,wikipedia_search,wikipedia.org,search,train,success,3,9.59,0,2,0,,,,,,,,,,,,,0.005551,,ok,The Alan Turing Wikipedia article page was successfully loaded and verified at https://en.wikipedia.org/wiki/Alan_Turing.
+agent,github_navigate_repo,github.com,navigate,train,success,3,11.56,0,2,0,,,,,,,,,,,,,0.006309,,ok,The repository title 'python/cpython' is visible on the page at https://github.com/python/cpython.
+agent,hacker_news_top,news.ycombinator.com,extract,train,success,2,4.71,0,1,0,,,,,,,,,,,,,0.003514,,ok,Five frontier LLMs disagree on 67% of 1k real-world fact-check claims
+agent,duckduckgo_search,duckduckgo.com,search,train,failed,15,63.28,0,12,0,,,,,,,,,,,,,0.034253,,max_steps,

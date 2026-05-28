@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from typing import Any
 
 import litellm
@@ -123,6 +124,8 @@ def _attempt(
 
 
 _MAX_PRIMARY_RETRIES = 2
+_MAX_INFRA_RETRIES = 3
+_INFRA_RETRY_DELAY_S = 2.0
 
 
 def complete(
@@ -142,36 +145,48 @@ def complete(
     last_exc: Exception | None = None
     for attempt_num in range(_MAX_PRIMARY_RETRIES):
         msgs = messages if attempt_num == 0 else messages + json_nudge
-        try:
-            return _attempt(
-                model=cfg.primary,
-                messages=msgs,
-                tier=tier,
-                call_site=call_site,
-                attempt="primary",
-                run_id=run_id,
-                task_type=task_type,
-                max_tokens=max_tokens,
-                schema=schema,
-                force_json=use_json_mode or (attempt_num > 0),
-            )
-        except BudgetExceededError:
-            raise
-        except ValidationError as exc:
-            last_exc = exc
-            logger.warning(
-                "Primary %s attempt %d/%d validation failed: %s",
-                cfg.primary, attempt_num + 1, _MAX_PRIMARY_RETRIES, exc,
-            )
+        for infra_try in range(_MAX_INFRA_RETRIES):
+            try:
+                return _attempt(
+                    model=cfg.primary,
+                    messages=msgs,
+                    tier=tier,
+                    call_site=call_site,
+                    attempt="primary",
+                    run_id=run_id,
+                    task_type=task_type,
+                    max_tokens=max_tokens,
+                    schema=schema,
+                    force_json=use_json_mode or (attempt_num > 0),
+                )
+            except BudgetExceededError:
+                raise
+            except ValidationError as exc:
+                last_exc = exc
+                logger.warning(
+                    "Primary %s attempt %d/%d validation failed: %s",
+                    cfg.primary, attempt_num + 1, _MAX_PRIMARY_RETRIES, exc,
+                )
+                break
+            except _INFRA_ERRORS as exc:
+                last_exc = exc
+                logger.warning(
+                    "Primary %s infra error (try %d/%d): %s",
+                    cfg.primary, infra_try + 1, _MAX_INFRA_RETRIES, exc,
+                )
+                if infra_try + 1 < _MAX_INFRA_RETRIES:
+                    time.sleep(_INFRA_RETRY_DELAY_S * (infra_try + 1))
+                    continue
+                break
+            except Exception as exc:
+                last_exc = exc
+                logger.warning("Primary %s unexpected error (%s): %s", cfg.primary, type(exc).__name__, exc)
+                break
+        else:
             continue
-        except _INFRA_ERRORS as exc:
-            last_exc = exc
-            logger.warning("Primary %s infra error: %s", cfg.primary, exc)
-            break
-        except Exception as exc:
-            last_exc = exc
-            logger.warning("Primary %s unexpected error (%s): %s", cfg.primary, type(exc).__name__, exc)
-            break
+        if isinstance(last_exc, ValidationError):
+            continue
+        break
 
     if not llm_config.fallback_enabled() or not _fallback_available(cfg.fallback):
         raise AllProvidersFailed(

@@ -16,6 +16,7 @@ from task1_agent.agent.recovery import (
     classify_failure,
     get_next_strategy,
 )
+from task1_agent.agent.extract import extract_from_page, infer_task_mode, page_context_snippet
 from task1_agent.agent.verify import VerifyResult, blind_critic_enabled, verify_step, verify_task_outcome, verify_via_blind_critic
 
 logger = logging.getLogger(__name__)
@@ -77,8 +78,8 @@ def _plan_next_action(
     from shared_harness.llm_router import AllProvidersFailed, complete
     from shared_harness.schemas.common import AgentAction
 
-    tree_snippet = compress_a11y(a11y_tree, max_chars=6000) if a11y_tree else ""
-    page_snippet = page_text[:2000] if page_text else ""
+    tree_snippet = compress_a11y(a11y_tree, max_chars=8000) if a11y_tree else ""
+    page_snippet = page_context_snippet(page_text, max_chars=4000) if page_text else ""
 
     messages = [
         {
@@ -87,9 +88,12 @@ def _plan_next_action(
                 "You are a browser automation planner. Given a task and the current page state, "
                 "decide the next action. If the task is already complete, set done=true and "
                 "provide the result.\n\n"
+                "IMPORTANT: Do NOT ask the user questions. All necessary information is on the page. "
+                "Complete the task to the best of your abilities.\n\n"
                 "Available actions: click, type, scroll, press_key, navigate, none\n"
                 "- click: selector = text/label of element to click\n"
                 "- type: selector = input placeholder/label, value = text to type\n"
+                "  (for search/find tasks, Enter is pressed automatically after type)\n"
                 "- press_key: value = key name (Enter, Tab, Escape)\n"
                 "- scroll: scroll down to reveal more content\n"
                 "- navigate: value = URL to go to\n\n"
@@ -107,7 +111,7 @@ def _plan_next_action(
             "content": (
                 f"TASK: {task_description}\n\n"
                 f"CURRENT URL: {current_url}\n\n"
-                f"PAGE CONTENT (first 2000 chars):\n{page_snippet}\n\n"
+                f"PAGE CONTENT:\n{page_snippet}\n\n"
                 f"ACCESSIBILITY TREE (compressed):\n{tree_snippet}\n\n"
                 f"STEP: {step_index} of {max_steps}\n\n"
                 "Plan the next action as JSON: {done, action, selector, value, reasoning, result}"
@@ -218,7 +222,38 @@ def run(
 
             if step.verify.passed:
                 if step_idx == 0:
-                    # Step 0 passed (page loaded) — always proceed to LLM planning
+                    if infer_task_mode(task_description) == "extract":
+                        extract_step = _execute_extract_step(
+                            step_index=1,
+                            nav_step=step,
+                            task_description=task_description,
+                            start_url=start_url,
+                            run_id=run_id,
+                        )
+                        result.steps.append(extract_step)
+                        job_store.insert_step(
+                            run_id,
+                            1,
+                            action=extract_step.action,
+                            status="success" if extract_step.verify.passed else "failed",
+                            log_json=json.dumps(
+                                {
+                                    "url": extract_step.url,
+                                    "action": extract_step.action,
+                                    "extracted_result": extract_step.extracted_result,
+                                    "error": extract_step.error,
+                                },
+                                default=str,
+                            ),
+                        )
+                        result.final_url = extract_step.url
+                        if extract_step.action == "task_complete":
+                            result.status = "success"
+                            result.extracted_result = extract_step.extracted_result
+                        else:
+                            result.status = "failed"
+                            result.error = extract_step.error or extract_step.verify.reason
+                        break
                     continue
                 else:
                     # Action step passed verification — continue to next LLM plan
@@ -298,6 +333,55 @@ def _execute_step(
         step = StepResult(step_index=step_index, action=action, error=str(exc))
         step.verify = VerifyResult(passed=False, reason=str(exc))
         step.failure_type = classify_failure(str(exc))
+    return step
+
+
+def _execute_extract_step(
+    *,
+    step_index: int,
+    nav_step: StepResult,
+    task_description: str,
+    start_url: str,
+    run_id: str,
+) -> StepResult:
+    """Single-shot extract path after successful navigation (no action loop)."""
+    extracted = extract_from_page(
+        task_description=task_description,
+        url=nav_step.url,
+        page_text=nav_step.page_text,
+        a11y_tree=nav_step.a11y_tree,
+        run_id=run_id,
+    )
+    if not extracted:
+        return StepResult(
+            step_index=step_index,
+            action="extract_failed",
+            url=nav_step.url,
+            page_text=nav_step.page_text,
+            a11y_tree=nav_step.a11y_tree,
+            verify=VerifyResult(passed=False, reason="Page extraction failed"),
+            failure_type=FailureType.ACTION_NO_EFFECT,
+            error="LLM extraction unavailable or returned empty result",
+        )
+
+    outcome = verify_task_outcome(
+        task=task_description,
+        url=nav_step.url,
+        page_text=nav_step.page_text,
+        extracted_result=extracted,
+        start_url=start_url,
+    )
+    step = StepResult(
+        step_index=step_index,
+        action="task_complete" if outcome.passed else "task_complete_rejected",
+        url=nav_step.url,
+        page_text=nav_step.page_text,
+        a11y_tree=nav_step.a11y_tree,
+        verify=outcome,
+    )
+    step.extracted_result = extracted
+    if not outcome.passed:
+        step.error = outcome.reason
     return step
 
 

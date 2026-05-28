@@ -172,7 +172,6 @@ with st.expander("技術堆疊"):
 | 前端 | Streamlit | 多頁面即時狀態應用 |
 | 瀏覽器 | Playwright | 無頭 Chrome 自動化 |
 | LLM | Gemini Flash/Pro | 規劃、驗證、仲裁 |
-| 備援 | OpenRouter | Gemini 不可用時切換 |
 | 儲存 | SQLite WAL | 任務紀錄、步驟、成本事件 |
 | 解析 | BeautifulSoup4 | SEC HTML 正規化 |
 | 部署 | Zeabur + Docker | 從 GitHub 自動部署 |
@@ -202,7 +201,7 @@ with st.expander("系統架構圖（文字版）"):
 │  llm_router · cost_tracker · job_store · edgar_client          │
 │  llm_parse · prompt_loader · schemas · eval_runner             │
 ├──────────────────────────────────────────────────────────────┤
-│  LLM：Gemini (主要) → OpenRouter (備援)                        │
+│  LLM：Gemini Flash / Pro                                       │
 │  預算：$20 全域 · $0.50/代理執行 · 熔斷器                        │
 └──────────────────────────────────────────────────────────────┘
 """, language=None)

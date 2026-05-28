@@ -32,15 +32,11 @@ with st.sidebar:
     st.markdown("**環境狀態**")
     _checks = {
         "GEMINI_API_KEY": bool(os.environ.get("GEMINI_API_KEY")),
-        "OPENROUTER_API_KEY": bool(os.environ.get("OPENROUTER_API_KEY")),
         "SEC_USER_AGENT": bool(os.environ.get("SEC_USER_AGENT")),
     }
     for key, ok in _checks.items():
         icon = "✅" if ok else "❌"
         st.markdown(f"{icon} `{key}`")
-
-    fallback_on = os.environ.get("LLM_FALLBACK_ENABLED", "true").lower() in ("1", "true")
-    st.markdown(f"{'🔄' if fallback_on else '⏸️'} 備援模型：{'啟用' if fallback_on else '停用'}")
 
     st.divider()
     st.caption("Streamlit · Playwright · Gemini · SQLite")
