@@ -98,7 +98,7 @@ def test_agent_eval_csv_fields_when_included(tmp_path: Path) -> None:
     from shared_harness.eval_runner import AgentEvalResult, FilingEvalResult, run_eval, write_eval_csv
 
     sec = FilingEvalResult(
-        accession="0000789019-24-000045",
+        accession="0000950170-24-087843",
         ticker="MSFT",
         cik="789019",
         split="train",

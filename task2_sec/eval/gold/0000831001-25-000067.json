@@ -1,90 +1,148 @@
 {
-  "accession": "0000831001-25-000067",
   "items": {
     "1": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 79,
       "start": 4186,
-      "end": 4265,
-      "status": "extracted"
+      "end": 4265
     },
     "1A": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 1080144,
       "start": 174024,
-      "end": 1254168,
-      "status": "extracted"
+      "end": 1254168
     },
     "1B": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 47,
       "start": 4265,
-      "end": 4312,
-      "status": "extracted"
+      "end": 4312
     },
     "1C": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 34,
       "start": 4312,
-      "end": 4346,
-      "status": "extracted"
+      "end": 4346
     },
     "2": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 115,
       "start": 4346,
-      "end": 4461,
-      "status": "extracted"
+      "end": 4461
+    },
+    "3": {
+      "status": "missing",
+      "confidence": 0.0,
+      "text_len": 0
     },
     "4": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 312,
       "start": 4461,
-      "end": 4773,
-      "status": "extracted"
+      "end": 4773
+    },
+    "5": {
+      "status": "missing",
+      "confidence": 0.0,
+      "text_len": 0
+    },
+    "6": {
+      "status": "missing",
+      "confidence": 0.0,
+      "text_len": 0
     },
     "7": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 156893,
       "start": 17131,
-      "end": 174024,
-      "status": "extracted"
+      "end": 174024
     },
     "7A": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 98,
       "start": 4773,
-      "end": 4871,
-      "status": "extracted"
+      "end": 4871
     },
     "8": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 57,
       "start": 4871,
-      "end": 4928,
-      "status": "extracted"
+      "end": 4928
     },
     "9": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 106,
       "start": 4928,
-      "end": 5034,
-      "status": "extracted"
+      "end": 5034
     },
     "9A": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 165,
       "start": 5034,
-      "end": 5199,
-      "status": "extracted"
+      "end": 5199
+    },
+    "9B": {
+      "status": "missing",
+      "confidence": 0.0,
+      "text_len": 0
     },
     "10": {
+      "status": "incorporated_by_reference",
+      "confidence": 0.95,
+      "text_len": 0,
       "start": 5199,
-      "end": 5269,
-      "status": "incorporated_by_reference"
+      "end": 5269
     },
     "11": {
+      "status": "incorporated_by_reference",
+      "confidence": 0.95,
+      "text_len": 0,
       "start": 5269,
-      "end": 5301,
-      "status": "incorporated_by_reference"
+      "end": 5301
     },
     "12": {
+      "status": "incorporated_by_reference",
+      "confidence": 0.95,
+      "text_len": 0,
       "start": 5301,
-      "end": 5406,
-      "status": "incorporated_by_reference"
+      "end": 5406
     },
     "13": {
+      "status": "incorporated_by_reference",
+      "confidence": 0.95,
+      "text_len": 0,
       "start": 5406,
-      "end": 5491,
-      "status": "incorporated_by_reference"
+      "end": 5491
     },
     "14": {
+      "status": "incorporated_by_reference",
+      "confidence": 0.95,
+      "text_len": 0,
       "start": 5491,
-      "end": 5551,
-      "status": "incorporated_by_reference"
+      "end": 5551
     },
     "15": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 11580,
       "start": 5551,
-      "end": 17131,
-      "status": "extracted"
+      "end": 17131
+    },
+    "16": {
+      "status": "missing",
+      "confidence": 0.0,
+      "text_len": 0
     }
   }
 }

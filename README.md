@@ -149,7 +149,7 @@ Fallback fires once per `(tier, call_site)` on 429/5xx/ValidationError. Skipped 
 
 | Ticker | Accession | Why it works well |
 |--------|-----------|-------------------|
-| **MSFT** | `0000789019-24-000045` | Clean HTML, standard TOC, 8 items extracted at $0.00 |
+| **MSFT** | `0000950170-24-087843` | Full 6.8 MB iXBRL HTML, standard TOC, 22 items extracted at $0.00 |
 
 ### Difficult / Known-Issue Filings
 

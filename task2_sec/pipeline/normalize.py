@@ -56,6 +56,8 @@ def _remove_ixbrl_metadata(root: Tag) -> None:
 def _remove_hidden_elements(root: Tag) -> None:
     """Remove elements with display:none (invisible XBRL containers)."""
     for tag in list(root.find_all(True)):
+        if tag.attrs is None:
+            continue
         style = tag.get("style", "")
         if isinstance(style, str) and re.search(r"display\s*:\s*none", style, re.I):
             tag.decompose()

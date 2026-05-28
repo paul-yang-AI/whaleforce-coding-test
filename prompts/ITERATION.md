@@ -2,6 +2,29 @@
 
 Record v1→v2 changes with Failed Path / Resolution / Validation.
 
+## infra_fix: MSFT cache + litellm upgrade + normalize robustness
+
+- **Failed Path**: Three critical infrastructure issues:
+  1. MSFT cache file was a 1,825-byte fake mock (hand-written HTML with dummy text),
+     not the real 6.86 MB EDGAR 10-K filing. Accession `0000789019-24-000045` was wrong —
+     the actual MSFT FY2024 10-K accession is `0000950170-24-087843`.
+  2. `litellm==1.55.0` couldn't parse Gemini 2.5/3 thinking model responses — returned
+     `content=None` because reasoning tokens consumed the `max_tokens` budget, leaving
+     zero text tokens. This caused `ValidationError` → retries exhausted → 
+     `AllProvidersFailed` → "LLM planner unavailable" on every agent run.
+  3. `normalize.py` crashed with `AttributeError: 'NoneType' object has no attribute 'get'`
+     on real MSFT filing (malformed HTML where `tag.attrs` is `None`).
+- **Resolution**:
+  1. Fixed MSFT accession in `manifest.json`, re-downloaded real filing (6.86 MB),
+     regenerated gold files. Updated all references (`.gitignore`, README, tests).
+  2. Upgraded `litellm>=1.86.0` — properly handles Gemini thinking tokens.
+     `gemini-3-flash-preview` and `gemini-3.1-pro-preview` now return content correctly.
+  3. Added `if tag.attrs is None: continue` guard in `_remove_hidden_elements`.
+  4. Fixed `eval_runner.py` gold comparison: excluded incorporated items (no `start`/`end`)
+     from boundary matching total.
+- **Validation**: 46 unit tests pass; 3/3 SEC filings pass eval (MSFT now 22/22 extracted,
+  char_coverage 0.9877); Gemini API calls return proper content.
+
 ## boundary_arbiter: v1 → v2 (regex fallback + prompt hardening)
 
 - **Failed Path**: Initial regex `ITEM\s+\d+` matched inline cross-references like

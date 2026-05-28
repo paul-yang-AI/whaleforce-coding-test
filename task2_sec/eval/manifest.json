@@ -3,8 +3,8 @@
     {
       "ticker": "MSFT",
       "cik": "789019",
-      "accession": "0000789019-24-000045",
-      "url": "https://www.sec.gov/Archives/edgar/data/789019/000078901924000045/msft-20240630.htm",
+      "accession": "0000950170-24-087843",
+      "url": "https://www.sec.gov/Archives/edgar/data/789019/000095017024087843/msft-20240630.htm",
       "label": "clean_baseline",
       "split": "train",
       "stress": []
@@ -16,7 +16,10 @@
       "url": "https://www.sec.gov/Archives/edgar/data/50863/000005086325000009/intc-20241228.htm",
       "label": "ixbrl_monster",
       "split": "train",
-      "stress": ["ixbrl", "dense_tables"]
+      "stress": [
+        "ixbrl",
+        "dense_tables"
+      ]
     },
     {
       "ticker": "C",
@@ -25,8 +28,14 @@
       "url": "https://www.sec.gov/Archives/edgar/data/831001/000083100125000067/c-20241231.htm",
       "label": "incorporation_by_reference",
       "split": "train",
-      "stress": ["items_10_14_reference"],
-      "required_items": ["1A", "7", "8"]
+      "stress": [
+        "items_10_14_reference"
+      ],
+      "required_items": [
+        "1A",
+        "7",
+        "8"
+      ]
     },
     {
       "ticker": "BRK.B",
@@ -35,9 +44,25 @@
       "url": "https://www.sec.gov/Archives/edgar/data/1067983/000095017025025210/brka-20241231.htm",
       "label": "heldout_toc",
       "split": "heldout",
-      "stress": ["k1_toc"]
+      "stress": [
+        "k1_toc"
+      ]
     }
   ],
-  "gold_items": ["1", "1A", "1B", "1C", "7", "8", "10", "14"],
-  "required_items": ["1", "1A", "7", "8"]
+  "gold_items": [
+    "1",
+    "1A",
+    "1B",
+    "1C",
+    "7",
+    "8",
+    "10",
+    "14"
+  ],
+  "required_items": [
+    "1",
+    "1A",
+    "7",
+    "8"
+  ]
 }

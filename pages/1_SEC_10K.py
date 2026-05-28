@@ -184,7 +184,7 @@ with tab_custom:
     st.markdown("輸入 SEC EDGAR 的 accession number，即時抽取任何 10-K 報表。")
     custom_accession = st.text_input(
         "Accession Number",
-        placeholder="0000789019-24-000045",
+        placeholder="0000950170-24-087843",
     )
     custom_url = st.text_input(
         "報表 URL（選填，留空自動解析）",

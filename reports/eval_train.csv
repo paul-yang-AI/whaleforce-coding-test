@@ -1,4 +1,4 @@
 task,record_id,domain,task_type,split,status,steps,elapsed_s,recovery_count,llm_calls,silent_failure,required_items_found,required_items_total,gold_items_matched,gold_items_total,gold_boundary_p95,toc_header_agreement,token_ratio_p50,char_coverage,tier0_extracted_count,incorporated_count,missing_count,low_confidence_count,usd_per_run,fallback_used,failure_category,extracted_result
-sec_10k,0000789019-24-000045,MSFT,extract,train,ok,,,0,0,0,4,4,8,8,0,1.0,0.9875,0.8718,8,0,14,0,0.0,False,ok,
+sec_10k,0000950170-24-087843,MSFT,extract,train,ok,,,0,0,0,4,4,22,22,0,1.0,0.9994,0.9877,22,0,0,0,0.0,False,ok,
 sec_10k,0000050863-25-000009,INTC,extract,train,ok,,,0,0,0,4,4,22,22,0,0.7727,0.997,0.8612,17,5,0,0,0.0,False,ok,
 sec_10k,0000831001-25-000067,C,extract,train,ok,,,0,0,0,3,3,17,17,0,0.7059,0.9819,0.9964,12,5,5,0,0.0,False,ok,

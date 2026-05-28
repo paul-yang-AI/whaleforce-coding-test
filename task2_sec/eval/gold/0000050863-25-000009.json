@@ -1,115 +1,158 @@
 {
-  "accession": "0000050863-25-000009",
   "items": {
     "1": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 195,
       "start": 468311,
-      "end": 468506,
-      "status": "extracted"
+      "end": 468506
     },
     "1A": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 108913,
       "start": 137453,
-      "end": 246366,
-      "status": "extracted"
+      "end": 246366
     },
     "1B": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 145,
       "start": 468506,
-      "end": 468651,
-      "status": "extracted"
+      "end": 468651
     },
     "1C": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 5786,
       "start": 252554,
-      "end": 258340,
-      "status": "extracted"
+      "end": 258340
     },
     "2": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 14548,
       "start": 258340,
-      "end": 272888,
-      "status": "extracted"
+      "end": 272888
     },
     "3": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 43072,
       "start": 425239,
-      "end": 468311,
-      "status": "extracted"
+      "end": 468311
     },
     "4": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 39,
       "start": 468651,
-      "end": 468690,
-      "status": "extracted"
+      "end": 468690
     },
     "5": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 135,
       "start": 468690,
-      "end": 468825,
-      "status": "extracted"
+      "end": 468825
     },
     "6": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 336,
       "start": 468825,
-      "end": 469161,
-      "status": "extracted"
+      "end": 469161
     },
     "7": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 72295,
       "start": 65158,
-      "end": 137453,
-      "status": "extracted"
+      "end": 137453
     },
     "7A": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 6188,
       "start": 246366,
-      "end": 252554,
-      "status": "extracted"
+      "end": 252554
     },
     "8": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 66,
       "start": 469161,
-      "end": 469227,
-      "status": "extracted"
+      "end": 469227
     },
     "9": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 134,
       "start": 469227,
-      "end": 469361,
-      "status": "extracted"
+      "end": 469361
     },
     "9A": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 152351,
       "start": 272888,
-      "end": 425239,
-      "status": "extracted"
+      "end": 425239
     },
     "9B": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 216,
       "start": 469361,
-      "end": 469577,
-      "status": "extracted"
+      "end": 469577
     },
     "10": {
+      "status": "incorporated_by_reference",
+      "confidence": 0.95,
+      "text_len": 0,
       "start": 469577,
-      "end": 469655,
-      "status": "incorporated_by_reference"
+      "end": 469655
     },
     "11": {
+      "status": "incorporated_by_reference",
+      "confidence": 0.95,
+      "text_len": 0,
       "start": 469655,
-      "end": 469692,
-      "status": "incorporated_by_reference"
+      "end": 469692
     },
     "12": {
+      "status": "incorporated_by_reference",
+      "confidence": 0.95,
+      "text_len": 0,
       "start": 469692,
-      "end": 469801,
-      "status": "incorporated_by_reference"
+      "end": 469801
     },
     "13": {
+      "status": "incorporated_by_reference",
+      "confidence": 0.95,
+      "text_len": 0,
       "start": 469801,
-      "end": 469889,
-      "status": "incorporated_by_reference"
+      "end": 469889
     },
     "14": {
+      "status": "incorporated_by_reference",
+      "confidence": 0.95,
+      "text_len": 0,
       "start": 469889,
-      "end": 469951,
-      "status": "incorporated_by_reference"
+      "end": 469951
     },
     "15": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 75,
       "start": 469951,
-      "end": 470026,
-      "status": "extracted"
+      "end": 470026
     },
     "16": {
+      "status": "extracted",
+      "confidence": 0.95,
+      "text_len": 2268,
       "start": 470026,
-      "end": 472294,
-      "status": "extracted"
+      "end": 472294
     }
   }
 }

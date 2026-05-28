@@ -228,7 +228,11 @@ def evaluate_filing(
     gold_items = (gold or {}).get("items", {})
     gold_errors: list[int] = []
     gold_matched = 0
+    gold_boundary_total = 0
     for item_id, expected in gold_items.items():
+        if "start" not in expected or "end" not in expected:
+            continue
+        gold_boundary_total += 1
         actual = by_id.get(item_id)
         if actual is None or actual.start is None or actual.end is None:
             continue
@@ -265,7 +269,7 @@ def evaluate_filing(
         required_items_total=len(required),
         gold_boundary_errors=gold_errors,
         gold_items_matched=gold_matched,
-        gold_items_total=len(gold_items),
+        gold_items_total=gold_boundary_total,
         toc_header_agreement=min(1.0, toc_agreement),
         token_ratio_p50=statistics.median(ratios) if ratios else 0.0,
         char_coverage=covered / body_len if body_len else 0.0,
