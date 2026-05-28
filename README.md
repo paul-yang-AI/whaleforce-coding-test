@@ -212,6 +212,7 @@ Held-out split: **not used for tuning** — results in `reports/heldout_snapshot
 2. **VLM / Set-of-Mark** — screenshot coordinate clicking for Canvas/React sites
 3. **Multi-Agent Debate** — extractor vs. compliance auditor for boundary arbitration
 4. **External Skill Trust** — allowlist + schema validation for third-party SOPs
+5. **Entropy Gradient Routing** — route tasks to different LLM tiers based on confidence/uncertainty: high-confidence items stay on Tier0 (regex, $0); low-confidence items escalate to Tier1 (Flash) or Tier2 (Pro). This adaptive routing reduces cost while maintaining quality on difficult filings.
 
 ## License
 

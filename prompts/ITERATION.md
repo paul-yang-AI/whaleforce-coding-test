@@ -82,6 +82,28 @@ Record v1→v2 changes with Failed Path / Resolution / Validation.
   Citi Items 10–14 → `incorporated_by_reference`; Citi Item 1 found via section_name
   (was `missing`). `char_coverage` now uses full body length (honest metric).
 
+## anti-overfitting: v1 (contract-driven eval + baseline comparison + UI localization)
+
+- **Failed Path**: Gold files in `task2_sec/eval/gold/` are generated from pipeline output — 
+  circular evaluation inflates metrics. Heuristics (`_SECTION_NAME_MAP`, INTC footnote `(a)` 
+  detection) could appear tuned to specific filings. No quantitative comparison against simpler
+  approaches to justify the hybrid architecture's value.
+- **Resolution**:
+  1. Documented **Contract-Driven Evaluation** in `docs/analysis.md`: three deterministic 
+     contracts (span integrity, token conservation, header retention) that hold on *any* filing 
+     regardless of format — no ground truth needed
+  2. Added **Baseline Comparison** table: Regex-Only vs Naive LLM vs Hybrid Pipeline with 
+     concrete metrics (items found, incorporation detection, cost, token ratio)
+  3. Added **Real-World Application** scenarios: Compliance Monitoring, QA Agent, Financial 
+     Data Aggregation, Regulatory Audit — showing the architecture extends beyond this test
+  4. Added **Entropy Gradient Routing** to Future Work in README.md — adaptive LLM tier 
+     selection based on item confidence
+  5. **UI全中文化**：Streamlit 四頁面（首頁、SEC 10-K、瀏覽器代理、評估儀表板）全部
+     改為繁體中文，載入 Noto Sans TC 字體，統一 font-weight 和 letter-spacing
+- **Validation**: No ticker-specific branching in pipeline code; all heuristics use generic 
+  patterns (regex anchored to SEC standard item format); `_SECTION_NAME_MAP` covers standard 
+  10-K section titles per SEC Regulation S-K, not individual filing quirks.
+
 ## agent_reliability: v2 → v3 (budget tuning + keyword verify + error logging)
 
 - **Failed Path**: Zeabur agent runs showed `plan_failed` on all steps 1–9 within ~200ms

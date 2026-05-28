@@ -1,4 +1,4 @@
-"""SEC 10-K extraction UI — vivid rendering with confidence bars and structured cards."""
+"""SEC 10-K 結構化抽取 — 信心條、狀態卡片、分部瀏覽。"""
 
 from __future__ import annotations
 
@@ -73,20 +73,18 @@ def _render_item(item) -> None:
 
     if item.status == ItemStatus.EXTRACTED and item.text:
         is_page_ref = _is_page_reference_only(item.text)
-        suffix = " (cross-reference)" if is_page_ref else ""
+        suffix = "（交叉引用）" if is_page_ref else ""
         with st.expander(f"{icon} {title}{suffix}", expanded=False):
-            # Confidence bar
             col_conf, col_len = st.columns([2, 1])
             with col_conf:
-                st.progress(item.confidence, text=f"Confidence: {item.confidence:.0%}")
+                st.progress(item.confidence, text=f"信心度：{item.confidence:.0%}")
             with col_len:
                 word_count = len(item.text.split())
-                st.caption(f"📝 {word_count:,} words · {len(item.text):,} chars")
+                st.caption(f"📝 {word_count:,} 詞 · {len(item.text):,} 字元")
 
             if is_page_ref:
                 st.info(
-                    "📄 This item contains a cross-reference to page numbers in the printed "
-                    "annual report. The full content resides in the PDF exhibit, not inline HTML."
+                    "📄 此項目為頁碼交叉引用，完整內容位於 PDF 附件中。"
                 )
 
             # Render text as markdown with basic structure
@@ -103,9 +101,9 @@ def _render_item(item) -> None:
                 st.caption("⚠️ " + " · ".join(item.warnings))
 
     elif item.status == ItemStatus.INCORPORATED_BY_REFERENCE:
-        with st.expander(f"{icon} {title} — Incorporated by Reference", expanded=False):
-            st.progress(item.confidence, text=f"Confidence: {item.confidence:.0%}")
-            st.info("This item is incorporated by reference from the company's proxy statement.")
+        with st.expander(f"{icon} {title} — 合併引用", expanded=False):
+            st.progress(item.confidence, text=f"信心度：{item.confidence:.0%}")
+            st.info("此項目透過合併引用方式，引自公司的委託書（Proxy Statement）。")
             if item.warnings:
                 for w in item.warnings:
                     st.caption(f"📋 {w}")
@@ -114,7 +112,7 @@ def _render_item(item) -> None:
         st.markdown(
             f'<div style="padding: 0.5rem 1rem; border-left: 4px solid {color}; '
             f'background: #fef2f2; border-radius: 4px; margin: 0.3rem 0;">'
-            f'{icon} <strong>{title}</strong> — Not found in filing</div>',
+            f'{icon} <strong>{title}</strong> — 報表中未找到</div>',
             unsafe_allow_html=True,
         )
     else:
@@ -166,42 +164,42 @@ def _format_sec_text(text: str) -> str:
 # --- Page Layout ---
 
 st.markdown(
-    '<h1 style="margin-bottom:0;">📄 SEC 10-K Extraction</h1>',
+    '<h1 style="margin-bottom:0;">📄 SEC 10-K 結構化抽取</h1>',
     unsafe_allow_html=True,
 )
 st.caption(
-    "Hybrid pipeline: Tier0 (BS4 + regex segmentation) → span integrity validation → "
-    "optional Tier2 LLM arbiter for disputed boundaries"
+    "混合管線：Tier0（BS4 + 正則分段）→ 跨度完整性驗證 → "
+    "可選 Tier2 LLM 仲裁（僅處理爭議邊界）"
 )
 
-tab_manifest, tab_custom = st.tabs(["📋 From Manifest", "🔗 Custom Filing"])
+tab_manifest, tab_custom = st.tabs(["📋 已註冊報表", "🔗 自訂報表"])
 
 with tab_manifest:
     filings = _load_manifest()
     labels = [f"{f['ticker']} — {f['accession']} ({f.get('label', '')})" for f in filings]
-    choice = st.selectbox("Select filing", labels, index=0)
+    choice = st.selectbox("選擇報表", labels, index=0)
     selected = filings[labels.index(choice)]
 
 with tab_custom:
-    st.markdown("Enter a SEC EDGAR accession number to extract any 10-K filing live.")
+    st.markdown("輸入 SEC EDGAR 的 accession number，即時抽取任何 10-K 報表。")
     custom_accession = st.text_input(
-        "Accession number",
+        "Accession Number",
         placeholder="0000789019-24-000045",
     )
     custom_url = st.text_input(
-        "Filing URL (optional — auto-resolved if blank)",
+        "報表 URL（選填，留空自動解析）",
         placeholder="https://www.sec.gov/Archives/edgar/data/.../filing.htm",
     )
-    custom_ticker = st.text_input("Ticker (optional)", placeholder="MSFT")
+    custom_ticker = st.text_input("股票代碼（選填）", placeholder="MSFT")
 
 use_arbiter = st.checkbox(
-    "🧠 Enable LLM arbiter (disputed boundaries)",
+    "🧠 啟用 LLM 仲裁（處理爭議邊界）",
     value=False,
-    help="Uses Tier2 model for low-confidence segments. Adds cost.",
+    help="使用 Tier2 模型處理低信心段落，會產生額外成本。",
 )
-force_live = False  # Always use cache for demo stability
+force_live = False
 
-run = st.button("🚀 Extract", type="primary", use_container_width=True)
+run = st.button("🚀 開始抽取", type="primary", use_container_width=True)
 
 if run:
     if custom_accession.strip():
@@ -215,7 +213,7 @@ if run:
         ticker = selected.get("ticker")
         cik = selected.get("cik")
 
-    with st.spinner(f"Extracting {accession}…"):
+    with st.spinner(f"正在抽取 {accession}…"):
         try:
             html = fetch_filing_html(
                 accession,
@@ -235,7 +233,7 @@ if run:
             st.session_state["sec_result"] = result
             st.session_state["sec_html_len"] = len(html)
         except Exception as exc:
-            st.error(f"❌ Extraction failed: {exc}")
+            st.error(f"❌ 抽取失敗：{exc}")
 
 result = st.session_state.get("sec_result")
 if result:
@@ -261,17 +259,16 @@ if result:
     low_conf = sum(1 for i in result.items if i.status == ItemStatus.LOW_CONFIDENCE)
 
     c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("✅ Extracted", extracted)
-    c2.metric("📎 Incorporated", incorporated)
-    c3.metric("⚠️ Low Confidence", low_conf)
-    c4.metric("❌ Missing", missing)
-    c5.metric("📊 Total", len(result.items))
+    c1.metric("✅ 已抽取", extracted)
+    c2.metric("📎 合併引用", incorporated)
+    c3.metric("⚠️ 低信心", low_conf)
+    c4.metric("❌ 缺失", missing)
+    c5.metric("📊 總計", len(result.items))
 
-    # Coverage bar
     total = len(result.items) or 1
     st.progress(
         (extracted + incorporated) / total,
-        text=f"Coverage: {extracted + incorporated}/{total} items resolved "
+        text=f"涵蓋率：{extracted + incorporated}/{total} 項已解析 "
         f"({(extracted + incorporated) / total:.0%})",
     )
 
@@ -296,24 +293,23 @@ if result:
     col_dl1, col_dl2 = st.columns(2)
     with col_dl1:
         st.download_button(
-            "📥 Download JSON",
+            "📥 下載 JSON",
             data=result.model_dump_json(indent=2),
             file_name=f"{result.accession or 'filing'}.json",
             mime="application/json",
             use_container_width=True,
         )
     with col_dl2:
-        # Generate markdown summary
-        md_lines = [f"# {result.ticker} 10-K Extraction\n\n"]
+        md_lines = [f"# {result.ticker} 10-K 抽取報告\n\n"]
         md_lines.append(f"Accession: {result.accession}\n\n")
         for item in result.items:
             name = _ITEM_NAMES.get(item.item_id, "")
             md_lines.append(f"## Item {item.item_id} — {name}\n\n")
-            md_lines.append(f"Status: {item.status.value} | Confidence: {item.confidence:.0%}\n\n")
+            md_lines.append(f"狀態：{item.status.value} | 信心度：{item.confidence:.0%}\n\n")
             if item.text:
                 md_lines.append(item.text[:3000] + "\n\n---\n\n")
         st.download_button(
-            "📥 Download Markdown",
+            "📥 下載 Markdown",
             data="".join(md_lines),
             file_name=f"{result.accession or 'filing'}.md",
             mime="text/markdown",

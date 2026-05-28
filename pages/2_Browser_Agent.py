@@ -1,4 +1,4 @@
-"""Browser Agent UI — timeline view, auto-refresh, vivid result cards."""
+"""瀏覽器代理 — 時間軸視圖、自動刷新、結果卡片。"""
 
 from __future__ import annotations
 
@@ -15,43 +15,43 @@ from task1_agent.agent.loop import run as agent_run
 
 _PRESETS = [
     {
-        "label": "Custom task (enter below)",
+        "label": "自訂任務（在下方輸入）",
         "task": "",
         "url": "",
         "category": "",
     },
     {
-        "label": "🌐 Navigate to Example.com",
+        "label": "🌐 導航至 Example.com",
         "task": "Navigate to example.com and verify the page loads successfully.",
         "url": "https://example.com",
         "category": "navigation",
     },
     {
-        "label": "📰 Hacker News — top story title",
+        "label": "📰 Hacker News — 頭條標題",
         "task": "Go to Hacker News and find the title of the #1 ranked story.",
         "url": "https://news.ycombinator.com",
         "category": "extraction",
     },
     {
-        "label": "📖 Wikipedia — search Alan Turing",
+        "label": "📖 Wikipedia — 搜尋 Alan Turing",
         "task": "Search Wikipedia for 'Alan Turing' and verify the article page loads.",
         "url": "https://en.wikipedia.org",
         "category": "search",
     },
     {
-        "label": "🔍 DuckDuckGo — search query",
+        "label": "🔍 DuckDuckGo — 搜尋查詢",
         "task": "Search DuckDuckGo for 'playwright browser automation' and verify results appear.",
         "url": "https://duckduckgo.com",
         "category": "search",
     },
     {
-        "label": "🔧 httpbin — view headers",
+        "label": "🔧 httpbin — 檢視 Headers",
         "task": "Navigate to httpbin.org/headers and extract the User-Agent header value.",
         "url": "https://httpbin.org/headers",
         "category": "extraction",
     },
     {
-        "label": "🐍 GitHub — view cpython repo",
+        "label": "🐍 GitHub — cpython 儲存庫",
         "task": "Navigate to the Python cpython repository on GitHub and confirm the repo title.",
         "url": "https://github.com/python/cpython",
         "category": "navigation",
@@ -101,14 +101,13 @@ def _action_icon(action: str) -> str:
 # --- Page Layout ---
 
 st.markdown(
-    '<h1 style="margin-bottom:0;">🤖 Browser Agent</h1>',
+    '<h1 style="margin-bottom:0;">🤖 瀏覽器自動化代理</h1>',
     unsafe_allow_html=True,
 )
-st.caption("Plan → Act → Observe → Verify → Reflect &nbsp;|&nbsp; LLM-planned actions &nbsp;|&nbsp; Classified recovery")
+st.caption("計畫 → 執行 → 觀察 → 驗證 → 反思 &nbsp;|&nbsp; LLM 驅動規劃 &nbsp;|&nbsp; 分類式錯誤恢復")
 
-# Task input
 preset_labels = [p["label"] for p in _PRESETS]
-preset_choice = st.selectbox("Task presets", preset_labels, index=0)
+preset_choice = st.selectbox("任務預設", preset_labels, index=0)
 selected_preset = _PRESETS[preset_labels.index(preset_choice)]
 
 if selected_preset["task"]:
@@ -119,13 +118,13 @@ else:
     default_url = st.session_state.get("agent_url_text", "")
 
 task = st.text_area(
-    "Task description",
+    "任務描述",
     value=default_task,
-    placeholder="Describe what the agent should do in natural language...",
+    placeholder="以自然語言描述代理應執行的操作…",
     height=80,
 )
 start_url = st.text_input(
-    "Start URL",
+    "起始 URL",
     value=default_url,
     placeholder="https://example.com",
 )
@@ -133,11 +132,10 @@ start_url = st.text_input(
 st.session_state["agent_task_text"] = task
 st.session_state["agent_url_text"] = start_url
 
-# Action buttons
 col1, col2, col3 = st.columns([2, 1, 1])
-submit = col1.button("🚀 Run Task", type="primary", use_container_width=True)
-refresh = col2.button("🔄 Refresh", use_container_width=True)
-stop = col3.button("⏹️ Stop", type="secondary", use_container_width=True)
+submit = col1.button("🚀 執行任務", type="primary", use_container_width=True)
+refresh = col2.button("🔄 刷新", use_container_width=True)
+stop = col3.button("⏹️ 停止", type="secondary", use_container_width=True)
 
 if "agent_run_id" not in st.session_state:
     st.session_state["agent_run_id"] = None
@@ -146,9 +144,9 @@ if "agent_cancel" not in st.session_state:
 
 if submit:
     if not task.strip():
-        st.error("Please enter a task description.")
+        st.error("請輸入任務描述。")
     elif not start_url.strip():
-        st.error("Please enter a start URL.")
+        st.error("請輸入起始 URL。")
     else:
         run_id = str(uuid.uuid4())
         cancel_event = threading.Event()
@@ -173,16 +171,16 @@ if submit:
 
         thread = threading.Thread(target=_run_agent, daemon=True)
         thread.start()
-        st.success(f"✅ Task submitted! Run ID: `{run_id[:8]}…`")
-        st.info("The agent is running in the background. Click **🔄 Refresh** to see progress.")
+        st.success(f"✅ 任務已提交！執行 ID：`{run_id[:8]}…`")
+        st.info("代理正在背景執行中，請點擊 **🔄 刷新** 查看進度。")
 
 if stop:
     cancel = st.session_state.get("agent_cancel")
     if cancel and not cancel.is_set():
         cancel.set()
-        st.warning("⏹️ Stop signal sent. Task will cancel at next step boundary.")
+        st.warning("⏹️ 已發送停止訊號，任務將在下一步邊界取消。")
     else:
-        st.info("No active task to stop.")
+        st.info("目前沒有進行中的任務。")
 
 # Results display
 run_id = st.session_state.get("agent_run_id")
@@ -192,12 +190,12 @@ if run_id and (refresh or submit):
 
     if status:
         status_config = {
-            "success": ("✅", "Task completed successfully", "success"),
-            "failed": ("❌", "Task failed", "error"),
-            "blocked": ("🚫", "Blocked (login/CAPTCHA required)", "warning"),
-            "cancelled": ("⏹️", "Cancelled by user", "warning"),
-            "running": ("⏳", "Running...", "info"),
-            "queued": ("🕐", "Queued, waiting to start...", "info"),
+            "success": ("✅", "任務成功完成", "success"),
+            "failed": ("❌", "任務失敗", "error"),
+            "blocked": ("🚫", "被阻擋（需要登入/CAPTCHA）", "warning"),
+            "cancelled": ("⏹️", "已被使用者取消", "warning"),
+            "running": ("⏳", "執行中…", "info"),
+            "queued": ("🕐", "排隊中，等待啟動…", "info"),
         }
         icon, msg, color = status_config.get(status, ("❓", status, "info"))
         getattr(st, color)(f"**{icon} {status.upper()}** — {msg}")
@@ -222,29 +220,27 @@ if run_id and (refresh or submit):
                 f'<div style="background: linear-gradient(135deg, #dcfce7 0%, #d1fae5 100%); '
                 f"border-radius: 12px; padding: 1.5rem; margin: 1rem 0; "
                 f'border: 1px solid #86efac;">'
-                f'<strong style="font-size: 1.1rem;">🎯 Result</strong><br>'
+                f'<strong style="font-size: 1.1rem;">🎯 執行結果</strong><br>'
                 f'<span style="font-size: 1rem; margin-top: 0.5rem; display: block;">'
                 f"{extracted_result}</span></div>",
                 unsafe_allow_html=True,
             )
 
-        # Timeline view
-        st.markdown(f"### Execution Timeline ({len(steps)} steps)")
+        st.markdown(f"### 執行時間軸（{len(steps)} 步）")
 
         for i, s in enumerate(steps):
             action = s.get("action", "")
             step_status = s.get("status", "")
             icon = _action_icon(action)
 
-            # Format action name
             if action.startswith("navigate:"):
-                action_display = f"Navigate → {action[9:]}"
+                action_display = f"導航 → {action[9:]}"
             elif action == "task_complete":
-                action_display = "Task Complete"
+                action_display = "任務完成"
             elif action == "plan_failed":
-                action_display = "LLM Planning Failed"
+                action_display = "LLM 規劃失敗"
             elif action.startswith("recovery:"):
-                action_display = f"Recovery: {action[9:]}"
+                action_display = f"恢復：{action[9:]}"
             elif ":" in action:
                 parts = action.split(":", 1)
                 action_display = f"{parts[0].title()} → {parts[1][:50]}"
@@ -278,29 +274,28 @@ if run_id and (refresh or submit):
                 except (json.JSONDecodeError, TypeError):
                     pass
 
-            # Render timeline item
             connector = "│" if i < len(steps) - 1 else " "
             st.markdown(
                 f'<div style="border-left: 3px solid {border_color}; padding: 0.6rem 1rem; '
                 f"margin-left: 1rem; margin-bottom: 0.3rem; background: {bg_color}; "
                 f'border-radius: 0 8px 8px 0;">'
-                f'<strong>{icon} Step {s["step_index"]}</strong> — {action_display}'
+                f'<strong>{icon} 步驟 {s["step_index"]}</strong> — {action_display}'
                 + (f'<br><span style="font-size:0.8rem;color:#666;">📍 {url_display}</span>' if url_display else "")
                 + (f'<br><span style="font-size:0.8rem;color:#dc2626;">⚠️ {error_display}</span>' if error_display else "")
-                + (f'<br><span style="font-size:0.8rem;color:#666;">🔄 Recovery: {s["recovery_strategy"]}</span>' if s.get("recovery_strategy") else "")
+                + (f'<br><span style="font-size:0.8rem;color:#666;">🔄 恢復策略：{s["recovery_strategy"]}</span>' if s.get("recovery_strategy") else "")
                 + "</div>",
                 unsafe_allow_html=True,
             )
 
         st.divider()
         st.download_button(
-            "📥 Download run log (JSON)",
+            "📥 下載執行紀錄（JSON）",
             data=json.dumps(steps, indent=2, default=str),
             file_name=f"run_{run_id}.json",
             mime="application/json",
         )
     elif status == "running":
-        st.info("⏳ Task is running... click **🔄 Refresh** to check progress.")
+        st.info("⏳ 任務執行中… 請點擊 **🔄 刷新** 查看進度。")
 
 st.divider()
 
@@ -308,39 +303,39 @@ st.divider()
 col_info1, col_info2 = st.columns(2)
 
 with col_info1:
-    with st.expander("🏗️ How it works"):
+    with st.expander("🏗️ 運作原理"):
         st.markdown("""
-**Agent Loop Architecture:**
+**代理迴圈架構：**
 
-1. **Navigate** → Load start URL, verify page renders
-2. **Plan** → LLM analyzes page state (a11y tree + text)
-3. **Act** → Execute planned action (click/type/scroll)
-4. **Observe** → Capture new page state
-5. **Verify** → Check if action had effect
-6. **Reflect** → LLM decides: continue or done?
-7. **Extract** → On completion, extract task-specific result
+1. **導航** → 載入起始 URL，確認頁面渲染
+2. **規劃** → LLM 分析頁面狀態（a11y 樹 + 文字）
+3. **執行** → 執行規劃的動作（點擊/輸入/捲動）
+4. **觀察** → 擷取新頁面狀態
+5. **驗證** → 確認動作是否生效
+6. **反思** → LLM 判斷：繼續或完成？
+7. **抽取** → 完成後抽取任務特定結果
 
-**Safety Guards:**
-- Max 10 steps per task
-- Max 25 LLM calls (budget enforced)
-- Classified recovery (max 2 strategies per failure)
-- Cost circuit breaker ($0.50/run limit)
+**安全防護：**
+- 每任務最多 10 步
+- 最多 25 次 LLM 呼叫（預算控制）
+- 分類式恢復（每次失敗最多 2 種策略）
+- 成本熔斷器（$0.50/次 上限）
 """)
 
 with col_info2:
-    with st.expander("⚡ Capabilities & Limitations"):
+    with st.expander("⚡ 能力與限制"):
         st.markdown("""
-**Works reliably:**
-- ✅ Navigation + page verification
-- ✅ Content/data extraction
-- ✅ Information lookup (news, wiki)
-- ✅ Search tasks (DuckDuckGo, Wikipedia)
-- ✅ Multi-step interactions
+**穩定支援：**
+- ✅ 頁面導航 + 驗證
+- ✅ 內容/資料抽取
+- ✅ 資訊查詢（新聞、維基）
+- ✅ 搜尋任務（DuckDuckGo、Wikipedia）
+- ✅ 多步驟互動
 
-**Known limitations:**
-- 🚫 No login/CAPTCHA bypass
-- ⚠️ Complex multi-step forms (flaky)
-- ⚠️ Heavy JS SPAs may timeout
-- ⚠️ Geo-restricted content
-- ⚠️ Requires valid LLM API key
+**已知限制：**
+- 🚫 無法繞過登入/CAPTCHA
+- ⚠️ 複雜多步驟表單（不穩定）
+- ⚠️ 重 JS SPA 可能逾時
+- ⚠️ 地理限制內容
+- ⚠️ 需要有效的 LLM API Key
 """)

@@ -1,0 +1,115 @@
+{
+  "description": "Baseline comparison: Regex-Only vs Naive LLM (estimated) vs Hybrid Pipeline",
+  "train_filings": [
+    "0000789019-24-000045",
+    "0000050863-25-000009",
+    "0000831001-25-000067"
+  ],
+  "results": {
+    "regex_only": [
+      {
+        "accession": "0000789019-24-000045",
+        "ticker": "MSFT",
+        "required_items_found": 4,
+        "required_items_total": 4,
+        "incorporated_count": 0,
+        "missing_count": 14,
+        "estimated_cost_per_filing": 0.0,
+        "token_ratio_p50": 1.0,
+        "method": "regex_only"
+      },
+      {
+        "accession": "0000050863-25-000009",
+        "ticker": "INTC",
+        "required_items_found": 4,
+        "required_items_total": 4,
+        "incorporated_count": 5,
+        "missing_count": 0,
+        "estimated_cost_per_filing": 0.0,
+        "token_ratio_p50": 1.0,
+        "method": "regex_only"
+      },
+      {
+        "accession": "0000831001-25-000067",
+        "ticker": "C",
+        "required_items_found": 0,
+        "required_items_total": 4,
+        "incorporated_count": 0,
+        "missing_count": 22,
+        "estimated_cost_per_filing": 0.0,
+        "token_ratio_p50": 1.0,
+        "method": "regex_only"
+      }
+    ],
+    "naive_llm_est": [
+      {
+        "accession": "0000789019-24-000045",
+        "ticker": "MSFT",
+        "required_items_found": 2,
+        "required_items_total": 4,
+        "incorporated_count": 0,
+        "missing_count": 14,
+        "estimated_cost_per_filing": 0.0075,
+        "token_ratio_p50": 0.4,
+        "method": "naive_llm_est"
+      },
+      {
+        "accession": "0000050863-25-000009",
+        "ticker": "INTC",
+        "required_items_found": 2,
+        "required_items_total": 4,
+        "incorporated_count": 0,
+        "missing_count": 5,
+        "estimated_cost_per_filing": 2.5976,
+        "token_ratio_p50": 0.4,
+        "method": "naive_llm_est"
+      },
+      {
+        "accession": "0000831001-25-000067",
+        "ticker": "C",
+        "required_items_found": 2,
+        "required_items_total": 4,
+        "incorporated_count": 0,
+        "missing_count": 10,
+        "estimated_cost_per_filing": 6.8979,
+        "token_ratio_p50": 0.4,
+        "method": "naive_llm_est"
+      }
+    ],
+    "hybrid": [
+      {
+        "accession": "0000789019-24-000045",
+        "ticker": "MSFT",
+        "required_items_found": 4,
+        "required_items_total": 4,
+        "incorporated_count": 0,
+        "missing_count": 14,
+        "estimated_cost_per_filing": 0.0,
+        "token_ratio_p50": 1.0,
+        "method": "hybrid"
+      },
+      {
+        "accession": "0000050863-25-000009",
+        "ticker": "INTC",
+        "required_items_found": 4,
+        "required_items_total": 4,
+        "incorporated_count": 5,
+        "missing_count": 0,
+        "estimated_cost_per_filing": 0.0,
+        "token_ratio_p50": 1.0,
+        "method": "hybrid"
+      },
+      {
+        "accession": "0000831001-25-000067",
+        "ticker": "C",
+        "required_items_found": 4,
+        "required_items_total": 4,
+        "incorporated_count": 5,
+        "missing_count": 5,
+        "estimated_cost_per_filing": 0.0,
+        "token_ratio_p50": 1.0,
+        "method": "hybrid"
+      }
+    ]
+  }
+}
