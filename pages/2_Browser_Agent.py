@@ -322,7 +322,7 @@ with col_info1:
 
 **Safety Guards:**
 - Max 10 steps per task
-- Max 8 LLM calls (budget enforced)
+- Max 25 LLM calls (budget enforced)
 - Classified recovery (max 2 strategies per failure)
 - Cost circuit breaker ($0.50/run limit)
 """)

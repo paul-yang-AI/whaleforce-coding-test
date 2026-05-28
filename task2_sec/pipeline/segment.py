@@ -42,6 +42,22 @@ _SECTION_NAME_MAP: list[tuple[str, str]] = [
 ]
 
 
+_PAGE_REF_RE = re.compile(r"(?:Pages?|pp?\.?)\s*[\d\-–,\s]+", re.IGNORECASE)
+_ITEM_LINE_RE = re.compile(r"Item\s+\d+[A-Z]?\.", re.IGNORECASE)
+
+
+def _is_page_reference_only(text: str) -> bool:
+    """Detect if text is just a cross-reference index entry (page numbers only)."""
+    if len(text) > 500:
+        return False
+    content = _PAGE_REF_RE.sub("", text)
+    content = _ITEM_LINE_RE.sub("", content)
+    content = re.sub(r"Part\s+[IV]+", "", content, flags=re.IGNORECASE)
+    content = re.sub(r"\(\s*[a-e]\s*\)", "", content)
+    content = re.sub(r"[:\.\s\n\r,;]+", "", content).strip()
+    return len(content) < 80
+
+
 class SegmentMethod(str, Enum):
     TOC = "toc"
     REGEX = "regex"
@@ -81,13 +97,39 @@ class Segmenter:
         if needs_fallback:
             name_hits = self._segment_from_section_names(body)
             if name_hits:
-                # Section-name hits take priority, but keep regex hits for
-                # items not found by section_name (e.g., "Item 1" in TOC)
                 name_ids = {s.item_id for s in name_hits}
                 supplementary = [s for s in merged if s.item_id not in name_ids]
                 merged = self._merge_segments(name_hits, supplementary, len(body))
 
+        # Post-merge: replace page-reference-only segments with section_name hits
+        merged = self._upgrade_short_segments(body, merged)
+
         return body, merged
+
+    def _upgrade_short_segments(
+        self, body: str, segments: list[SegmentResult]
+    ) -> list[SegmentResult]:
+        """Replace items whose text is just page references with section_name matches."""
+        name_hits = self._segment_from_section_names(body)
+        name_by_id = {s.item_id: s for s in name_hits}
+
+        upgraded = False
+        for i, seg in enumerate(segments):
+            text = body[seg.start : seg.end].strip()
+            if len(text) > 500:
+                continue
+            if not _is_page_reference_only(text):
+                continue
+            alt = name_by_id.get(seg.item_id)
+            if alt and alt.start != seg.start:
+                segments[i] = alt
+                upgraded = True
+
+        if upgraded:
+            segments = sorted(segments, key=lambda s: s.start)
+            for i, seg in enumerate(segments):
+                seg.end = segments[i + 1].start if i + 1 < len(segments) else len(body)
+        return segments
 
     def _segment_from_toc(self, html: str, body: str) -> list[SegmentResult]:
         """Discover item ids from TOC anchors; positions resolved via regex on body."""
@@ -147,22 +189,20 @@ class Segmenter:
     def _pick_best_start(self, starts: list[int], body_len: int) -> int:
         """Choose the best header position among multiple matches.
 
-        For large documents: avoids TOC/index entries at the very start/end.
-        For small docs or when all matches are in content area: take the last match
-        (which is typically the content header, not the TOC entry).
+        Strategy: for items that appear in both the TOC and content body,
+        prefer the content occurrence. The TOC is typically in the first 5%
+        and last 5% of large filings.
         """
         if len(starts) == 1:
             return starts[0]
 
-        # For large docs (>50K): exclude matches in first/last 3% (likely TOC/index)
-        if body_len > 50000:
-            lo = body_len * 3 // 100
+        if body_len > 20000:
+            lo = body_len * 5 // 100
             hi = body_len - lo
             content_starts = [s for s in starts if lo < s < hi]
             if content_starts:
-                return content_starts[-1]
+                return content_starts[0]
 
-        # Default: take last match (content header after TOC entry)
         return starts[-1]
 
     def _segment_from_section_names(self, body: str) -> list[SegmentResult]:
@@ -200,7 +240,7 @@ class Segmenter:
         ]
         if not starts:
             return -1
-        return starts[-1] if len(starts) > 1 else starts[0]
+        return self._pick_best_start(starts, len(body))
 
     def _merge_segments(
         self,
@@ -209,14 +249,14 @@ class Segmenter:
         body_len: int,
     ) -> list[SegmentResult]:
         by_id: dict[str, SegmentResult] = {}
-        for seg in sorted(toc + regex, key=lambda s: (s.start, s.item_id)):
+        # Regex hits processed first; TOC overwrites only if position is further
+        for seg in regex:
+            by_id[seg.item_id] = seg
+        for seg in toc:
             existing = by_id.get(seg.item_id)
             if existing is None:
                 by_id[seg.item_id] = seg
-                continue
-            if seg.method == SegmentMethod.REGEX and existing.method != SegmentMethod.REGEX:
-                by_id[seg.item_id] = seg
-            elif seg.method == existing.method and seg.start > existing.start:
+            elif seg.start > existing.start:
                 by_id[seg.item_id] = seg
 
         ordered = sorted(by_id.values(), key=lambda s: s.start)

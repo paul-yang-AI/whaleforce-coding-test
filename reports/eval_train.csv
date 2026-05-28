@@ -1,10 +1,4 @@
 task,record_id,domain,task_type,split,status,steps,elapsed_s,recovery_count,llm_calls,silent_failure,required_items_found,required_items_total,gold_items_matched,gold_items_total,gold_boundary_p95,toc_header_agreement,token_ratio_p50,char_coverage,tier0_extracted_count,incorporated_count,missing_count,low_confidence_count,usd_per_run,fallback_used,failure_category,extracted_result
 sec_10k,0000789019-24-000045,MSFT,extract,train,ok,,,0,0,0,4,4,8,8,0,1.0,0.9875,0.8718,8,0,14,0,0.0,False,ok,
-sec_10k,0000050863-25-000009,INTC,extract,train,ok,,,0,0,0,4,4,22,22,0,1.0,0.9879,0.862,22,0,0,0,0.0,False,ok,
+sec_10k,0000050863-25-000009,INTC,extract,train,ok,,,0,0,0,4,4,22,22,0,0.7727,0.9949,0.8612,17,5,0,0,0.0,False,ok,
 sec_10k,0000831001-25-000067,C,extract,train,ok,,,0,0,0,3,3,14,14,0,0.6429,0.9879,0.9963,9,5,8,0,0.0,False,ok,
-agent,smoke_example_title,example.com,navigate,train,success,2,8.65,0,1,0,,,,,,,,,,,,,0.000548,,ok,The page title is 'Example Domain'.
-agent,smoke_httpbin_headers,httpbin.org,extract,train,failed,10,62.69,0,8,0,,,,,,,,,,,,,0.009035,,max_steps,
-agent,wikipedia_search,wikipedia.org,search,train,failed,10,36.51,0,3,0,,,,,,,,,,,,,0.007622,,max_steps,
-agent,github_navigate_repo,github.com,navigate,train,success,8,58.98,0,8,0,,,,,,,,,,,,,0.02475,,ok,The repository title 'python/cpython' is visible on the page at https://github.com/python/cpython.
-agent,hacker_news_top,news.ycombinator.com,extract,train,success,2,8.07,0,1,0,,,,,,,,,,,,,0.003277,,ok,I'm Tired of Talking to AI
-agent,duckduckgo_search,duckduckgo.com,search,train,failed,10,30.38,0,8,0,,,,,,,,,,,,,0.021831,,max_steps,

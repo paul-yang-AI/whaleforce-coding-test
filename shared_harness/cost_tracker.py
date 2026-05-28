@@ -17,8 +17,8 @@ class BudgetLimits:
     global_budget_usd: float = 20.0
     per_run_agent_usd: float = 0.50
     per_run_filing_usd: float = 0.30
-    max_llm_calls_agent: int = 8
-    max_llm_calls_filing: int = 3
+    max_llm_calls_agent: int = 25
+    max_llm_calls_filing: int = 5
 
 
 def _limits() -> BudgetLimits:

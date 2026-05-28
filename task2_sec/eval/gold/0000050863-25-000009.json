@@ -79,27 +79,27 @@
     "10": {
       "start": 469577,
       "end": 469655,
-      "status": "extracted"
+      "status": "incorporated_by_reference"
     },
     "11": {
       "start": 469655,
       "end": 469692,
-      "status": "extracted"
+      "status": "incorporated_by_reference"
     },
     "12": {
       "start": 469692,
       "end": 469801,
-      "status": "extracted"
+      "status": "incorporated_by_reference"
     },
     "13": {
       "start": 469801,
       "end": 469889,
-      "status": "extracted"
+      "status": "incorporated_by_reference"
     },
     "14": {
       "start": 469889,
       "end": 469951,
-      "status": "extracted"
+      "status": "incorporated_by_reference"
     },
     "15": {
       "start": 469951,

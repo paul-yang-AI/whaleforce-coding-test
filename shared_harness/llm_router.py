@@ -117,7 +117,7 @@ def _attempt(
     return parse_model(raw, schema)
 
 
-_MAX_PRIMARY_RETRIES = 3
+_MAX_PRIMARY_RETRIES = 2
 
 
 def complete(
@@ -154,17 +154,25 @@ def complete(
             raise
         except ValidationError as exc:
             last_exc = exc
-            logger.debug("Primary attempt %d/%d validation failed", attempt_num + 1, _MAX_PRIMARY_RETRIES)
+            logger.warning(
+                "Primary %s attempt %d/%d validation failed: %s",
+                cfg.primary, attempt_num + 1, _MAX_PRIMARY_RETRIES, exc,
+            )
             continue
         except _INFRA_ERRORS as exc:
             last_exc = exc
+            logger.warning("Primary %s infra error: %s", cfg.primary, exc)
             break
         except Exception as exc:
             last_exc = exc
+            logger.warning("Primary %s unexpected error (%s): %s", cfg.primary, type(exc).__name__, exc)
             break
 
     if not llm_config.fallback_enabled() or not _fallback_available(cfg.fallback):
-        raise AllProvidersFailed("Primary failed and fallback disabled or unavailable")
+        raise AllProvidersFailed(
+            f"Primary {cfg.primary} failed ({type(last_exc).__name__}: {last_exc}); "
+            f"fallback={'disabled' if not llm_config.fallback_enabled() else 'unavailable'}"
+        )
 
     try:
         return _attempt(

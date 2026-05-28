@@ -110,14 +110,17 @@ def _plan_next_action(
             schema=AgentAction,
             run_id=run_id,
             task_type="agent",
-            max_tokens=256,
+            max_tokens=512,
         )
         return result.model_dump() if hasattr(result, "model_dump") else None
-    except (BudgetExceededError, AllProvidersFailed) as exc:
-        logger.warning("LLM planning unavailable: %s", exc)
+    except BudgetExceededError as exc:
+        logger.warning("LLM planning budget exceeded: %s", exc)
+        return None
+    except AllProvidersFailed as exc:
+        logger.error("LLM planning all providers failed: %s", exc)
         return None
     except Exception as exc:
-        logger.warning("LLM planning error: %s", exc)
+        logger.error("LLM planning unexpected error (%s): %s", type(exc).__name__, exc)
         return None
 
 

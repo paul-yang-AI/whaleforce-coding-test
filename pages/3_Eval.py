@@ -35,9 +35,10 @@ if summary:
     k1, k2, k3, k4 = st.columns(4)
 
     sec_ok = summary.get("sec_ok", 0)
-    sec_total = summary.get("sec_total", 0)
-    agent_ok = summary.get("agent_success", 0)
-    agent_total = summary.get("agent_total", 0)
+    sec_total = summary.get("sec_filings", summary.get("sec_total", 1))
+    agent_total = summary.get("agent_tasks", summary.get("agent_total", 1))
+    agent_rate = summary.get("agent_success_rate", 0)
+    agent_ok = int(agent_rate * agent_total) if agent_rate <= 1 else int(agent_rate)
 
     k1.metric(
         "SEC 10-K",
@@ -66,7 +67,7 @@ if summary:
     total_pass = sec_ok + agent_ok
     col_bar, col_pct = st.columns([4, 1])
     with col_bar:
-        st.progress(total_pass / max(total_tasks, 1))
+        st.progress(min(max(total_pass / max(total_tasks, 1), 0.0), 1.0))
     with col_pct:
         st.markdown(f"**{total_pass}/{total_tasks}** pass")
 
@@ -143,8 +144,10 @@ if csv_files:
                         st.code(result_text, language=None)
                     else:
                         st.caption("No result extracted")
-                    if pd.notna(row.get("latency_s")):
-                        st.caption(f"⏱️ {row['latency_s']:.1f}s | 💰 ${row.get('cost_usd', 0):.4f}")
+                    elapsed = row.get("elapsed_s", row.get("latency_s"))
+                    if pd.notna(elapsed):
+                        usd = row.get("usd_per_run", row.get("cost_usd", 0)) or 0
+                        st.caption(f"⏱️ {float(elapsed):.1f}s | 💰 ${float(usd):.4f}")
 else:
     st.warning(
         "No eval CSV found. Run:\n\n"
