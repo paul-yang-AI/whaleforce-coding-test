@@ -8,7 +8,6 @@ import uuid
 from pathlib import Path
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 from shared_harness import job_store
 from shared_harness.sec_ui import sec_result_matches_context
@@ -110,19 +109,6 @@ _SEC_CONTENT_CSS = """
 }
 .sec-reader ul { margin: 0.3rem 0 0.8rem 1.2rem; padding: 0; }
 .sec-reader li { margin-bottom: 0.25rem; }
-.sec-html-viewer {
-    max-width: 52rem; margin: 0 auto; padding: 0.75rem 1rem;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 0.82rem; line-height: 1.45; color: #111;
-    background: #fff; border-radius: 8px; border: 1px solid #e5e7eb;
-    max-height: 560px; overflow: auto;
-}
-.sec-html-viewer table {
-    width: 100%; border-collapse: collapse; margin: 0.5rem 0 1rem;
-}
-.sec-html-viewer td, .sec-html-viewer th {
-    padding: 0.25rem 0.5rem; border: 1px solid #d1d5db; vertical-align: top;
-}
 .tier-badge {
     display: inline-block; padding: 0.15rem 0.55rem; border-radius: 6px;
     font-size: 0.78rem; font-weight: 600; font-family: system-ui, sans-serif;
@@ -156,67 +142,6 @@ def _render_quality_badge(item) -> None:
         )
     else:
         st.caption("✓ 契約驗證通過（span integrity + token ratio）")
-
-
-def _prepare_snippet_for_iframe(html_snippet: str) -> str:
-    """Remove embedded scripts so iframe scroll JS cannot be broken by filing markup."""
-    text = re.sub(r"<script\b[^>]*>[\s\S]*?</script>", "", html_snippet, flags=re.I)
-    text = re.sub(r"<script\b[^>]*>", "", text, flags=re.I)
-    return text.replace("</script>", "")
-
-
-def _render_html_snippet_viewer(
-    html_snippet: str,
-    *,
-    anchor: str | None,
-    border_color: str,
-    component_key: str,
-) -> None:
-    """Render SEC HTML snippet in a scrollable viewer that jumps to the item anchor."""
-    anchor_js = json.dumps(anchor or "")
-    safe_snippet = _prepare_snippet_for_iframe(html_snippet)
-    components.html(
-        f"""<!DOCTYPE html><!-- {component_key} -->
-<html><head><meta charset="utf-8"><style>
-body {{
-  margin: 0; padding: 0; background: #fff;
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 0.82rem; line-height: 1.45; color: #111;
-}}
-#sec-viewer {{
-  max-height: 560px; overflow: auto; padding: 0.75rem 1rem;
-  border-left: 4px solid {border_color}; border-radius: 8px;
-  border: 1px solid #e5e7eb; border-left-width: 4px;
-  scroll-behavior: auto;
-}}
-:target {{ scroll-margin-top: 12px; outline: none; }}
-table {{ width: 100%; border-collapse: collapse; margin: 0.5rem 0 1rem; }}
-td, th {{ padding: 0.25rem 0.5rem; border: 1px solid #d1d5db; vertical-align: top; }}
-</style></head><body>
-<div id="sec-viewer">{safe_snippet}</div>
-<script>
-(function() {{
-  var anchor = {anchor_js};
-  var viewer = document.getElementById("sec-viewer");
-  function scrollToAnchor() {{
-    if (!anchor || !viewer) return;
-    var el = document.getElementById(anchor);
-    if (!el) return;
-    var top = el.getBoundingClientRect().top - viewer.getBoundingClientRect().top + viewer.scrollTop;
-    viewer.scrollTop = Math.max(0, top - 8);
-  }}
-  if (document.readyState === "loading") {{
-    document.addEventListener("DOMContentLoaded", scrollToAnchor);
-  }} else {{
-    scrollToAnchor();
-  }}
-  requestAnimationFrame(scrollToAnchor);
-  [0, 80, 250, 600].forEach(function(ms) {{ setTimeout(scrollToAnchor, ms); }});
-}})();
-</script></body></html>""",
-        height=580,
-        scrolling=False,
-    )
 
 
 def _sec_item_links(
@@ -276,34 +201,13 @@ def _render_item(
                 if document_url:
                     st.link_button("📄 原始 HTML", document_url, use_container_width=True)
 
-            tab_text, tab_html = st.tabs(["📝 結構化文字", "📊 原始 HTML 片段"])
-            with tab_text:
-                formatted = _format_sec_text(item.text)
-                st.markdown(_SEC_CONTENT_CSS, unsafe_allow_html=True)
-                st.markdown(
-                    f'<div class="sec-reader" style="border-left: 4px solid {color};">'
-                    f"{formatted}</div>",
-                    unsafe_allow_html=True,
-                )
-            with tab_html:
-                if is_page_ref:
-                    st.info(
-                        "此項目為交叉引用索引，無對應的內文 HTML 片段。"
-                        "請使用上方「在 SEC 查看」開啟官方原文。"
-                    )
-                elif item.html_snippet:
-                    st.caption("保留原始表格與排版（來自 EDGAR HTML 片段）")
-                    _render_html_snippet_viewer(
-                        item.html_snippet,
-                        anchor=item.source_anchor,
-                        border_color=color,
-                        component_key=f"sec-html-{accession or 'na'}-{item.item_id}",
-                    )
-                else:
-                    st.info(
-                        "此項目無法對應 HTML 片段（可能缺少錨點或標題）。"
-                        "請使用上方「在 SEC 查看」開啟官方原文。"
-                    )
+            formatted = _format_sec_text(item.text)
+            st.markdown(_SEC_CONTENT_CSS, unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="sec-reader" style="border-left: 4px solid {color};">'
+                f"{formatted}</div>",
+                unsafe_allow_html=True,
+            )
 
             if item.warnings:
                 st.caption("⚠️ " + " · ".join(item.warnings))

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from shared_harness.schemas.sec_schema import FilingExtraction
-from task2_sec.pipeline.html_snippet import attach_html_snippets
 from task2_sec.pipeline.segment import Segmenter
 from task2_sec.pipeline.validate import validate_segments
 
@@ -23,7 +22,6 @@ def extract_from_html(
         html, run_id=run_id, use_llm_fallback=use_llm_fallback
     )
     items = validate_segments(body, segments, run_id=run_id, use_arbiter=use_arbiter)
-    attach_html_snippets(html, body, segments, items)
     return FilingExtraction(
         accession=accession,
         cik=cik,

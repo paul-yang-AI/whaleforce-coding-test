@@ -25,7 +25,7 @@
 ### Zeabur smoke (after push → auto redeploy)
 - [ ] **Browser Agent**: preset "Navigate to Example.com" → Run → Refresh → `success` + **Result** block
 - [ ] **Browser Agent**: preset "Hacker News" → verify multi-step + extracted title
-- [ ] **SEC 10K**: MSFT from manifest → Extract → Item tree + **原始 HTML 片段** tab
+- [ ] **SEC 10K**: MSFT from manifest → Extract → Item tree + 結構化文字閱讀視圖
 - [ ] **SEC 10K**: Citi → Items 10–14 show `incorporated_by_reference`
 - [ ] **SEC 10K**: JSON/Markdown 下載（metrics 下方，應即時無長等待）
 - [ ] **Eval**: 即時紀錄 tab 可見 Agent + SEC runs；基準 tab 正常

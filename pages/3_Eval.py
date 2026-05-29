@@ -356,7 +356,7 @@ with tab_limits:
 | ✅ 良好 | MSFT、INTC（標準 TOC） |
 | ⚠️ 困難 | Citi（大量 incorporated by reference）、iXBRL 複雜 |
 | 🔍 搜尋 | 建議 **ticker**（GOOGL）或 accession；`google` 等單字易 EFTS 雜訊 |
-| 📊 展示 | 結構化文字 + **原始 HTML 片段** tab；SEC viewer deep link |
+| 📊 展示 | 結構化文字閱讀視圖；SEC viewer deep link（原文連結） |
 | 🚫 未支援 | PDF-only 報表、非英文 20-F |
 
 完整分析見 [docs/analysis.md](../docs/analysis.md) 與 README Known Limitations。
