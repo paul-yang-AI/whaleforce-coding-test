@@ -12,7 +12,6 @@ import streamlit as st
 from shared_harness import job_store
 from shared_harness.sec_ui import sec_result_matches_context
 from shared_harness.edgar_client import (
-    build_sec_document_url,
     build_sec_viewer_url,
     find_proxy_filing,
     format_filing_search_label,
@@ -144,26 +143,10 @@ def _render_quality_badge(item) -> None:
         st.caption("✓ 契約驗證通過（span integrity + token ratio）")
 
 
-def _sec_item_links(
-    *,
-    accession: str | None,
-    cik: str | None,
-    source_url: str | None,
-    anchor: str | None,
-) -> tuple[str | None, str | None]:
-    if not accession:
-        return None, None
-    viewer = build_sec_viewer_url(accession, cik=cik, anchor=anchor)
-    document = build_sec_document_url(source_url, anchor) if source_url else None
-    return viewer, document
-
-
 def _render_item(
     item,
     *,
     cik: str | None = None,
-    accession: str | None = None,
-    source_url: str | None = None,
 ) -> None:
     icon = _status_icon(item.status)
     color = _status_color(item.status)
@@ -186,20 +169,6 @@ def _render_item(
                     "📄 此項目為頁碼交叉引用索引（內容散見於報表其他頁）。"
                     "請使用上方連結開啟官方原文查看完整內容。"
                 )
-
-            viewer_url, document_url = _sec_item_links(
-                accession=accession,
-                cik=cik,
-                source_url=source_url,
-                anchor=item.source_anchor,
-            )
-            link_cols = st.columns([1, 1, 2])
-            with link_cols[0]:
-                if viewer_url:
-                    st.link_button("🔗 在 SEC 查看", viewer_url, use_container_width=True)
-            with link_cols[1]:
-                if document_url:
-                    st.link_button("📄 原始 HTML", document_url, use_container_width=True)
 
             formatted = _format_sec_text(item.text)
             st.markdown(_SEC_CONTENT_CSS, unsafe_allow_html=True)
@@ -557,12 +526,7 @@ def _render_sec_results(result: FilingExtraction) -> None:
             continue
         st.markdown(f"### Part {part}")
         for item in items:
-            _render_item(
-                item,
-                cik=result.cik,
-                accession=result.accession,
-                source_url=result.source_url,
-            )
+            _render_item(item, cik=result.cik)
 
 
 def _maybe_render_sec_results(*, source: str, accession: str) -> None:

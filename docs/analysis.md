@@ -126,7 +126,7 @@ Key observations:
 | E2E long-context LLM (*estimated*) | ~$0.05–0.15/filing | Prone to summarize/miss middle | Low |
 | **SEC Hybrid (this repo)** | **$0.00** | Required items 100% train | High (span integrity) |
 | E2E browser agent (*estimated*) | ~$0.01–0.05/task | Silent failure risk | Low |
-| **Agent Hybrid (this repo)** | **~$0.006** | 50% train (3/6); silent_failure=0 | High (L0 + optional Critic) |
+| **Agent Hybrid (this repo)** | **~$0.0077** | 100% train (5/5); silent_failure=0 | High (L0 + optional Critic) |
 
 ---
 
@@ -180,13 +180,14 @@ The three-layer fallback and contract-driven evaluation make this pipeline suita
 
 | Metric | Value |
 |--------|-------|
-| Train tasks | 6 |
-| Success rate | 50% (3/6) |
+| Train tasks | 5 |
+| Success rate | 100% (5/5) |
 | Silent failures | 0 |
-| P50 latency | 27.0s |
-| P95 latency | 57.7s |
-| P50 cost | $0.0059 |
-| LLM calls (total run) | 19 |
+| P50 latency | 9.3s |
+| P95 latency | 9.9s |
+| P50 cost | $0.0077 |
+| LLM calls (total run) | 8 |
+| Recovery steps (total) | 1 |
 | Max steps/task | 10 |
 | Max LLM calls/task | 25 |
 | Max primary retries | 2 |
