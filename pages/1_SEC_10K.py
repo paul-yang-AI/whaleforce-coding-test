@@ -10,6 +10,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 from shared_harness import job_store
+from shared_harness.sec_ui import sec_result_matches_context
 from shared_harness.edgar_client import (
     build_sec_document_url,
     build_sec_viewer_url,
@@ -198,10 +199,26 @@ td, th {{ padding: 0.25rem 0.5rem; border: 1px solid #d1d5db; vertical-align: to
     scrollToAnchor();
   }}
   requestAnimationFrame(scrollToAnchor);
+  [0, 80, 250, 600].forEach(function(ms) {{ setTimeout(scrollToAnchor, ms); }});
 }})();
 </script></body></html>""",
         height=580,
         scrolling=False,
+    )
+
+
+@st.fragment
+def _html_snippet_fragment(
+    html_snippet: str,
+    *,
+    anchor: str | None,
+    border_color: str,
+    fragment_key: str,
+) -> None:
+    _render_html_snippet_viewer(
+        html_snippet,
+        anchor=anchor,
+        border_color=border_color,
     )
 
 
@@ -273,10 +290,11 @@ def _render_item(
             with tab_html:
                 if item.html_snippet:
                     st.caption("保留原始表格與排版（來自 EDGAR HTML 片段）")
-                    _render_html_snippet_viewer(
+                    _html_snippet_fragment(
                         item.html_snippet,
                         anchor=item.source_anchor,
                         border_color=color,
+                        fragment_key=f"{accession or 'na'}-{item.item_id}",
                     )
                 else:
                     st.info(
@@ -462,10 +480,11 @@ def _log_sec_extraction(
     *,
     accession: str,
     html_len: int,
+    label: str | None = None,
     error: str | None = None,
 ) -> None:
     run_id = str(uuid.uuid4())
-    job_store.create_run("sec", run_id=run_id)
+    job_store.create_run("sec", run_id=run_id, label=label or f"SEC {accession}")
     if result is not None:
         log = {
             "accession": accession,
@@ -521,6 +540,152 @@ def _sec_download_fragment() -> None:
         )
 
 
+def _execute_sec_extraction(
+    *,
+    accession: str,
+    filing_url: str | None,
+    ticker: str | None,
+    cik: str | None,
+    source: str,
+    label: str | None = None,
+) -> None:
+    use_arbiter = True
+    with st.spinner(f"正在抽取 {accession}…"):
+        try:
+            html, resolved_cik, source_url = fetch_filing_html(
+                accession,
+                url=filing_url,
+                cik=cik,
+                force_refresh=False,
+            )
+            display_cik = resolved_cik or cik
+            result = extract_from_html(
+                html,
+                accession=accession,
+                cik=display_cik,
+                ticker=ticker,
+                source_url=source_url or filing_url,
+                use_arbiter=use_arbiter,
+                run_id=None,
+            )
+            st.session_state["sec_result"] = result
+            st.session_state["sec_result_accession"] = accession
+            st.session_state["sec_result_source"] = source
+            st.session_state["sec_html_len"] = len(html)
+            _cache_sec_downloads(result)
+            _log_sec_extraction(
+                result,
+                accession=accession,
+                html_len=len(html),
+                label=label,
+            )
+        except Exception as exc:
+            err_msg = str(exc)
+            st.error(f"❌ 抽取失敗：{err_msg}")
+            _log_sec_extraction(
+                None,
+                accession=accession,
+                html_len=st.session_state.get("sec_html_len", 0),
+                label=label,
+                error=err_msg,
+            )
+            if "CIK" in err_msg or "404" in err_msg or "index" in err_msg.lower():
+                st.info(
+                    "💡 **常見原因**：\n"
+                    "1. Accession number 格式不正確（需含連字號，如 `0000950170-24-087843`）\n"
+                    "2. 該報表的 CIK 無法自動解析 — 請在上方填入公司的 CIK\n"
+                    "3. 直接貼上完整的 EDGAR 報表 URL 可以跳過 CIK 解析"
+                )
+
+
+@st.fragment
+def _sec_summary_fragment(result: FilingExtraction) -> None:
+    extracted = sum(1 for i in result.items if i.status == ItemStatus.EXTRACTED)
+    incorporated = sum(1 for i in result.items if i.status == ItemStatus.INCORPORATED_BY_REFERENCE)
+    missing = sum(1 for i in result.items if i.status == ItemStatus.MISSING)
+    low_conf = sum(1 for i in result.items if i.status == ItemStatus.LOW_CONFIDENCE)
+    total = len(result.items) or 1
+    covered = extracted + incorporated
+    pct = covered / total
+
+    c1, c2, c3, c4, c5 = st.columns(5)
+    c1.metric("✅ 已抽取", extracted)
+    c2.metric("📎 合併引用", incorporated)
+    c3.metric("⚠️ 低信心", low_conf)
+    c4.metric("❌ 缺失", missing)
+    c5.metric("📊 總計", len(result.items))
+
+    st.markdown(
+        f'<div style="background:#f3f4f6;border-radius:8px;padding:0.55rem 0.85rem;'
+        f'margin:0.35rem 0 0.75rem;font-size:0.9rem;color:#374151;">'
+        f"涵蓋率：<strong>{covered}/{total}</strong> 項已解析 "
+        f"(<strong>{pct:.0%}</strong>)</div>",
+        unsafe_allow_html=True,
+    )
+    _sec_download_fragment()
+
+
+def _render_sec_results(result: FilingExtraction) -> None:
+    if st.session_state.get("sec_download_json") is None:
+        _cache_sec_downloads(result)
+
+    st.divider()
+    html_len = st.session_state.get("sec_html_len", 0)
+    filing_viewer = build_sec_viewer_url(result.accession, cik=result.cik)
+    doc_link = ""
+    if result.source_url:
+        doc_link = (
+            f' &nbsp;|&nbsp; <a href="{result.source_url}" target="_blank">原始文件</a>'
+        )
+    st.markdown(
+        f'<div style="background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%); '
+        f'border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem;">'
+        f'<strong style="font-size: 1.3rem;">{result.ticker or "N/A"}</strong> &nbsp;'
+        f'<span style="color:#666;">CIK: {result.cik or "N/A"} &nbsp;|&nbsp; '
+        f'Accession: {result.accession}</span><br>'
+        f'<span style="font-size: 0.85rem; color: #888;">'
+        f'Source: {html_len:,} chars HTML &nbsp;|&nbsp; '
+        f'<a href="{filing_viewer}" target="_blank">SEC 互動式檢視器</a>'
+        f'{doc_link}</span></div>',
+        unsafe_allow_html=True,
+    )
+
+    _sec_summary_fragment(result)
+    st.divider()
+
+    by_part: dict[str, list] = {p: [] for p in _PART_ORDER}
+    by_part["Other"] = []
+    for item in result.items:
+        part = item.part or "Other"
+        by_part.setdefault(part, []).append(item)
+
+    for part in _PART_ORDER + (["Other"] if by_part.get("Other") else []):
+        items = by_part.get(part) or []
+        if not items:
+            continue
+        st.markdown(f"### Part {part}")
+        for item in items:
+            _render_item(
+                item,
+                cik=result.cik,
+                accession=result.accession,
+                source_url=result.source_url,
+            )
+
+
+def _maybe_render_sec_results(*, source: str, accession: str) -> None:
+    if not sec_result_matches_context(
+        source=source,
+        accession=accession,
+        result_source=st.session_state.get("sec_result_source"),
+        result_accession=st.session_state.get("sec_result_accession"),
+    ):
+        return
+    result = st.session_state.get("sec_result")
+    if result:
+        _render_sec_results(result)
+
+
 # --- Page Layout ---
 
 st.markdown(
@@ -534,15 +699,21 @@ st.caption(
 
 tab_manifest, tab_custom = st.tabs(["📋 已註冊報表", "🔗 自訂報表"])
 
-_run_source: str | None = None
-
 with tab_manifest:
     filings = _load_manifest()
     labels = [f"{f['ticker']} — {f['accession']} ({f.get('label', '')})" for f in filings]
     choice = st.selectbox("選擇報表", labels, index=0)
     selected = filings[labels.index(choice)]
     if st.button("🚀 開始抽取", type="primary", use_container_width=True, key="run_manifest"):
-        _run_source = "manifest"
+        _execute_sec_extraction(
+            accession=selected["accession"],
+            filing_url=selected.get("url"),
+            ticker=selected.get("ticker"),
+            cik=selected.get("cik"),
+            source="manifest",
+            label=f"{selected.get('ticker', 'SEC')} 10-K",
+        )
+    _maybe_render_sec_results(source="manifest", accession=selected["accession"])
 
 with tab_custom:
     st.markdown(
@@ -626,130 +797,12 @@ with tab_custom:
         if not custom_accession.strip():
             st.error("請輸入 Accession Number。")
         else:
-            _run_source = "custom"
-
-use_arbiter = True
-
-if _run_source == "manifest":
-    accession = selected["accession"]
-    filing_url = selected.get("url")
-    ticker = selected.get("ticker")
-    cik = selected.get("cik")
-elif _run_source == "custom":
-    accession = custom_accession.strip()
-    filing_url = custom_url.strip() or None
-    ticker = custom_ticker.strip() or None
-    cik = custom_cik.strip() or None
-
-if _run_source:
-    with st.spinner(f"正在抽取 {accession}…"):
-        try:
-            html, resolved_cik, source_url = fetch_filing_html(
-                accession,
-                url=filing_url,
-                cik=cik,
-                force_refresh=False,
+            _execute_sec_extraction(
+                accession=custom_accession.strip(),
+                filing_url=custom_url.strip() or None,
+                ticker=custom_ticker.strip() or None,
+                cik=custom_cik.strip() or None,
+                source="custom",
+                label=f"{custom_ticker.strip() or custom_accession.strip()} 10-K",
             )
-            display_cik = resolved_cik or cik
-            st.session_state["sec_result"] = None
-            result = extract_from_html(
-                html,
-                accession=accession,
-                cik=display_cik,
-                ticker=ticker,
-                source_url=source_url or filing_url,
-                use_arbiter=use_arbiter,
-                run_id=None,
-            )
-            st.session_state["sec_result"] = result
-            st.session_state["sec_html_len"] = len(html)
-            _cache_sec_downloads(result)
-            _log_sec_extraction(result, accession=accession, html_len=len(html))
-        except Exception as exc:
-            err_msg = str(exc)
-            st.error(f"❌ 抽取失敗：{err_msg}")
-            _log_sec_extraction(
-                None,
-                accession=accession,
-                html_len=st.session_state.get("sec_html_len", 0),
-                error=err_msg,
-            )
-            if "CIK" in err_msg or "404" in err_msg or "index" in err_msg.lower():
-                st.info(
-                    "💡 **常見原因**：\n"
-                    "1. Accession number 格式不正確（需含連字號，如 `0000950170-24-087843`）\n"
-                    "2. 該報表的 CIK 無法自動解析 — 請在上方填入公司的 CIK\n"
-                    "3. 直接貼上完整的 EDGAR 報表 URL 可以跳過 CIK 解析"
-                )
-
-result = st.session_state.get("sec_result")
-if result:
-    if st.session_state.get("sec_download_json") is None:
-        _cache_sec_downloads(result)
-
-    st.divider()
-
-    # Filing metadata card
-    html_len = st.session_state.get("sec_html_len", 0)
-    filing_viewer = build_sec_viewer_url(result.accession, cik=result.cik)
-    doc_link = ""
-    if result.source_url:
-        doc_link = (
-            f' &nbsp;|&nbsp; <a href="{result.source_url}" target="_blank">原始文件</a>'
-        )
-    st.markdown(
-        f'<div style="background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%); '
-        f'border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem;">'
-        f'<strong style="font-size: 1.3rem;">{result.ticker or "N/A"}</strong> &nbsp;'
-        f'<span style="color:#666;">CIK: {result.cik or "N/A"} &nbsp;|&nbsp; '
-        f'Accession: {result.accession}</span><br>'
-        f'<span style="font-size: 0.85rem; color: #888;">'
-        f'Source: {html_len:,} chars HTML &nbsp;|&nbsp; '
-        f'<a href="{filing_viewer}" target="_blank">SEC 互動式檢視器</a>'
-        f'{doc_link}</span></div>',
-        unsafe_allow_html=True,
-    )
-
-    # Summary metrics
-    extracted = sum(1 for i in result.items if i.status == ItemStatus.EXTRACTED)
-    incorporated = sum(1 for i in result.items if i.status == ItemStatus.INCORPORATED_BY_REFERENCE)
-    missing = sum(1 for i in result.items if i.status == ItemStatus.MISSING)
-    low_conf = sum(1 for i in result.items if i.status == ItemStatus.LOW_CONFIDENCE)
-
-    c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("✅ 已抽取", extracted)
-    c2.metric("📎 合併引用", incorporated)
-    c3.metric("⚠️ 低信心", low_conf)
-    c4.metric("❌ 缺失", missing)
-    c5.metric("📊 總計", len(result.items))
-
-    total = len(result.items) or 1
-    st.progress(
-        (extracted + incorporated) / total,
-        text=f"涵蓋率：{extracted + incorporated}/{total} 項已解析 "
-        f"({(extracted + incorporated) / total:.0%})",
-    )
-
-    _sec_download_fragment()
-
-    st.divider()
-
-    # Items grouped by Part
-    by_part: dict[str, list] = {p: [] for p in _PART_ORDER}
-    by_part["Other"] = []
-    for item in result.items:
-        part = item.part or "Other"
-        by_part.setdefault(part, []).append(item)
-
-    for part in _PART_ORDER + (["Other"] if by_part.get("Other") else []):
-        items = by_part.get(part) or []
-        if not items:
-            continue
-        st.markdown(f"### Part {part}")
-        for item in items:
-            _render_item(
-                item,
-                cik=result.cik,
-                accession=result.accession,
-                source_url=result.source_url,
-            )
+    _maybe_render_sec_results(source="custom", accession=custom_accession.strip())

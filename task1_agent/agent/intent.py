@@ -40,7 +40,13 @@ def task_implies_search(task: str) -> bool:
 def task_implies_summary(task: str) -> bool:
     """True when the task asks for a summary/synthesis of page content."""
     return bool(
-        re.search(r"摘要|总结|總結|summarize|summary|整理一下|簡述", task, re.I)
+        re.search(
+            r"摘要|总结|總結|summarize|summary|整理一下|簡述|"
+            r"資訊|信息|告訴我|给我|給我|介绍|介紹|"
+            r"some info|tell me about|give me",
+            task,
+            re.I,
+        )
     )
 
 

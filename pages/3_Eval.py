@@ -155,8 +155,28 @@ def _render_live_runs() -> None:
         llm = int(run.get("llm_calls") or 0)
         created = (run.get("created_at") or "")[:19].replace("T", " ")
 
+        title = (run.get("label") or "").strip()
+        if not title:
+            for step in job_store.get_run_steps(rid):
+                log_raw = step.get("log_json")
+                if not log_raw:
+                    continue
+                try:
+                    log = json.loads(log_raw)
+                except Exception:
+                    continue
+                if log.get("task"):
+                    title = str(log["task"])[:100]
+                    break
+                if log.get("accession"):
+                    title = f"SEC {log.get('ticker') or log['accession']}"
+                    break
+        if not title:
+            title = "（無標題）"
+
         with st.expander(
-            f"{icon} {type_badge} · `{short_id}` · {status} · {created} · {steps} steps · ${usd:.4f}"
+            f"{icon} {type_badge} · **{title}** · "
+            f"`{short_id}` · {status} · {created} · {steps} steps · ${usd:.4f}"
         ):
             st.caption(f"Run ID: `{rid}`")
             step_rows = job_store.get_run_steps(rid)

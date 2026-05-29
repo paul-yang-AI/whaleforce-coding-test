@@ -192,7 +192,12 @@ def run(
 
             result.steps.append(step)
 
-            log_data = {"url": step.url, "error": step.error, "action": step.action}
+            log_data = {
+                "url": step.url,
+                "error": step.error,
+                "action": step.action,
+                "task": task_description,
+            }
             if step.extracted_result:
                 log_data["extracted_result"] = step.extracted_result
 

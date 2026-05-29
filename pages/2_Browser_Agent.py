@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import threading
-import time
 import uuid
 
 import streamlit as st
@@ -106,6 +105,173 @@ def _is_agent_running() -> bool:
     return status in ("running", "queued")
 
 
+def _status_banner_html(status: str) -> str:
+    status_config = {
+        "success": ("✅", "任務成功完成", "#dcfce7", "#166534", "#86efac"),
+        "failed": ("❌", "任務失敗", "#fef2f2", "#991b1b", "#fecaca"),
+        "blocked": ("🚫", "被阻擋（需要登入/CAPTCHA）", "#fffbeb", "#92400e", "#fde68a"),
+        "cancelled": ("⏹️", "已被使用者取消", "#fffbeb", "#92400e", "#fde68a"),
+        "running": ("⏳", "執行中…", "#eff6ff", "#1e40af", "#bfdbfe"),
+        "queued": ("🕐", "排隊中，等待啟動…", "#f9fafb", "#374151", "#e5e7eb"),
+    }
+    icon, msg, bg, fg, border = status_config.get(
+        status, ("❓", status, "#f9fafb", "#374151", "#e5e7eb")
+    )
+    return (
+        f'<div style="background:{bg};color:{fg};border:1px solid {border};'
+        f'border-radius:8px;padding:0.65rem 0.9rem;margin:0.5rem 0;">'
+        f"<strong>{icon} {status.upper()}</strong> — {msg}</div>"
+    )
+
+
+def _format_step_line(s: dict) -> str:
+    action = s.get("action", "")
+    step_status = s.get("status", "")
+    step_icon = _action_icon(action)
+
+    if action.startswith("navigate:"):
+        action_display = f"導航 → {action[9:]}"
+    elif action == "task_complete":
+        action_display = "任務完成"
+    elif action == "task_complete_rejected":
+        action_display = "任務完成但結果驗證失敗"
+    elif action == "plan_failed":
+        action_display = "LLM 規劃失敗"
+    elif action.startswith("recovery:"):
+        action_display = f"恢復：{action[9:]}"
+    elif ":" in action:
+        parts = action.split(":", 1)
+        action_display = f"{parts[0].title()} → {parts[1][:50]}"
+    else:
+        action_display = action
+
+    if step_status == "success":
+        border_color = "#10b981"
+        bg_color = "#f0fdf4"
+    elif step_status == "failed":
+        border_color = "#ef4444"
+        bg_color = "#fef2f2"
+    elif step_status == "attempting":
+        border_color = "#f59e0b"
+        bg_color = "#fffbeb"
+    else:
+        border_color = "#6b7280"
+        bg_color = "#f9fafb"
+
+    url_display = ""
+    error_display = ""
+    if s.get("log_json"):
+        try:
+            log = json.loads(s["log_json"])
+            if log.get("url"):
+                url_display = log["url"]
+            if log.get("error"):
+                error_display = log["error"]
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    extra = ""
+    if url_display:
+        extra += f'<br><span style="font-size:0.8rem;color:#666;">📍 {url_display}</span>'
+    if error_display:
+        extra += f'<br><span style="font-size:0.8rem;color:#dc2626;">⚠️ {error_display}</span>'
+    if s.get("recovery_strategy"):
+        extra += (
+            f'<br><span style="font-size:0.8rem;color:#666;">🔄 恢復策略：'
+            f'{s["recovery_strategy"]}</span>'
+        )
+
+    return (
+        f'<div style="border-left: 3px solid {border_color}; padding: 0.6rem 1rem; '
+        f"margin-left: 1rem; margin-bottom: 0.3rem; background: {bg_color}; "
+        f'border-radius: 0 8px 8px 0;">'
+        f'<strong>{step_icon} 步驟 {s["step_index"]}</strong> — {action_display}{extra}</div>'
+    )
+
+
+def _render_agent_run_panel(
+    run_id: str,
+    *,
+    include_download: bool = True,
+    show_status: bool = True,
+) -> str | None:
+    """Render status + timeline for one run. Returns run status."""
+    status = _get_run_status(run_id)
+    if not status:
+        return None
+
+    if show_status:
+        st.markdown(_status_banner_html(status), unsafe_allow_html=True)
+
+    steps = _get_run_steps(run_id)
+    if steps:
+        extracted_result = None
+        for s in reversed(steps):
+            if s.get("log_json"):
+                try:
+                    log = json.loads(s["log_json"])
+                    if log.get("extracted_result"):
+                        extracted_result = log["extracted_result"]
+                        break
+                except (json.JSONDecodeError, TypeError):
+                    pass
+
+        if extracted_result:
+            st.markdown(
+                f'<div style="background: linear-gradient(135deg, #dcfce7 0%, #d1fae5 100%); '
+                f"border-radius: 12px; padding: 1.5rem; margin: 1rem 0; "
+                f'border: 1px solid #86efac;">'
+                f'<strong style="font-size: 1.1rem;">🎯 執行結果</strong><br>'
+                f'<span style="font-size: 1rem; margin-top: 0.5rem; display: block;">'
+                f"{extracted_result}</span></div>",
+                unsafe_allow_html=True,
+            )
+
+        st.markdown(f"### 執行時間軸（{len(steps)} 步）")
+        st.markdown("".join(_format_step_line(s) for s in steps), unsafe_allow_html=True)
+
+        if include_download:
+            st.divider()
+            st.download_button(
+                "📥 下載執行紀錄（JSON）",
+                data=json.dumps(steps, indent=2, default=str),
+                file_name=f"run_{run_id}.json",
+                mime="application/json",
+                key=f"download_run_{run_id}",
+            )
+    elif status in ("running", "queued"):
+        st.markdown(
+            '<p style="color:#6b7280;margin:0.5rem 0;">等待第一步完成…</p>',
+            unsafe_allow_html=True,
+        )
+
+    return status
+
+
+@st.fragment(run_every=3)
+def _agent_live_progress(run_id: str) -> None:
+    """Lightweight polling UI — markdown only, no alerts/download buttons."""
+    status = _get_run_status(run_id)
+    if not status:
+        return
+    steps = _get_run_steps(run_id)
+    st.markdown(_status_banner_html(status), unsafe_allow_html=True)
+    if steps:
+        latest = steps[-1]
+        action = latest.get("action") or "—"
+        st.markdown(
+            f"**進行中** · 已完成 **{len(steps)}** 步 · 最新：`{action}`",
+        )
+        st.markdown("".join(_format_step_line(s) for s in steps), unsafe_allow_html=True)
+    else:
+        st.markdown(
+            '<p style="color:#6b7280;margin:0.25rem 0;">等待第一步完成…</p>',
+            unsafe_allow_html=True,
+        )
+    if status not in ("running", "queued"):
+        st.session_state["agent_auto_refresh"] = False
+
+
 # --- Page Layout ---
 
 st.markdown(
@@ -177,7 +343,7 @@ if submit:
         st.session_state["agent_run_id"] = run_id
         st.session_state["agent_cancel"] = cancel_event
 
-        job_store.create_run("agent", run_id=run_id)
+        job_store.create_run("agent", run_id=run_id, label=task[:120])
 
         def _run_agent():
             executor = PlaywrightExecutor(headless=True)
@@ -207,127 +373,17 @@ if stop:
     else:
         st.info("目前沒有進行中的任務。")
 
-# Results display — always show if we have a run_id
+# Results display — fragment polls lightly while running; full panel when done
 run_id = st.session_state.get("agent_run_id")
 if run_id:
     st.divider()
     status = _get_run_status(run_id)
-
-    if status:
-        status_config = {
-            "success": ("✅", "任務成功完成", "success"),
-            "failed": ("❌", "任務失敗", "error"),
-            "blocked": ("🚫", "被阻擋（需要登入/CAPTCHA）", "warning"),
-            "cancelled": ("⏹️", "已被使用者取消", "warning"),
-            "running": ("⏳", "執行中…", "info"),
-            "queued": ("🕐", "排隊中，等待啟動…", "info"),
-        }
-        icon, msg, color = status_config.get(status, ("❓", status, "info"))
-        getattr(st, color)(f"**{icon} {status.upper()}** — {msg}")
-
-    steps = _get_run_steps(run_id)
-    if steps:
-        # Extract result
-        extracted_result = None
-        for s in reversed(steps):
-            if s.get("log_json"):
-                try:
-                    log = json.loads(s["log_json"])
-                    if log.get("extracted_result"):
-                        extracted_result = log["extracted_result"]
-                        break
-                except (json.JSONDecodeError, TypeError):
-                    pass
-
-        # Result card (prominent)
-        if extracted_result:
-            st.markdown(
-                f'<div style="background: linear-gradient(135deg, #dcfce7 0%, #d1fae5 100%); '
-                f"border-radius: 12px; padding: 1.5rem; margin: 1rem 0; "
-                f'border: 1px solid #86efac;">'
-                f'<strong style="font-size: 1.1rem;">🎯 執行結果</strong><br>'
-                f'<span style="font-size: 1rem; margin-top: 0.5rem; display: block;">'
-                f"{extracted_result}</span></div>",
-                unsafe_allow_html=True,
-            )
-
-        st.markdown(f"### 執行時間軸（{len(steps)} 步）")
-
-        for i, s in enumerate(steps):
-            action = s.get("action", "")
-            step_status = s.get("status", "")
-            icon = _action_icon(action)
-
-            if action.startswith("navigate:"):
-                action_display = f"導航 → {action[9:]}"
-            elif action == "task_complete":
-                action_display = "任務完成"
-            elif action == "task_complete_rejected":
-                action_display = "任務完成但結果驗證失敗"
-            elif action == "plan_failed":
-                action_display = "LLM 規劃失敗"
-            elif action.startswith("recovery:"):
-                action_display = f"恢復：{action[9:]}"
-            elif ":" in action:
-                parts = action.split(":", 1)
-                action_display = f"{parts[0].title()} → {parts[1][:50]}"
-            else:
-                action_display = action
-
-            # Status indicator
-            if step_status == "success":
-                border_color = "#10b981"
-                bg_color = "#f0fdf4"
-            elif step_status == "failed":
-                border_color = "#ef4444"
-                bg_color = "#fef2f2"
-            elif step_status == "attempting":
-                border_color = "#f59e0b"
-                bg_color = "#fffbeb"
-            else:
-                border_color = "#6b7280"
-                bg_color = "#f9fafb"
-
-            # Parse log for URL
-            url_display = ""
-            error_display = ""
-            if s.get("log_json"):
-                try:
-                    log = json.loads(s["log_json"])
-                    if log.get("url"):
-                        url_display = log["url"]
-                    if log.get("error"):
-                        error_display = log["error"]
-                except (json.JSONDecodeError, TypeError):
-                    pass
-
-            connector = "│" if i < len(steps) - 1 else " "
-            st.markdown(
-                f'<div style="border-left: 3px solid {border_color}; padding: 0.6rem 1rem; '
-                f"margin-left: 1rem; margin-bottom: 0.3rem; background: {bg_color}; "
-                f'border-radius: 0 8px 8px 0;">'
-                f'<strong>{icon} 步驟 {s["step_index"]}</strong> — {action_display}'
-                + (f'<br><span style="font-size:0.8rem;color:#666;">📍 {url_display}</span>' if url_display else "")
-                + (f'<br><span style="font-size:0.8rem;color:#dc2626;">⚠️ {error_display}</span>' if error_display else "")
-                + (f'<br><span style="font-size:0.8rem;color:#666;">🔄 恢復策略：{s["recovery_strategy"]}</span>' if s.get("recovery_strategy") else "")
-                + "</div>",
-                unsafe_allow_html=True,
-            )
-
-        st.divider()
-        st.download_button(
-            "📥 下載執行紀錄（JSON）",
-            data=json.dumps(steps, indent=2, default=str),
-            file_name=f"run_{run_id}.json",
-            mime="application/json",
-        )
-    elif status == "running":
-        st.info("⏳ 任務執行中…自動刷新中。")
-
-    if status in ("running", "queued"):
-        st.session_state["agent_auto_refresh"] = True
-    elif status in ("success", "failed", "blocked", "cancelled"):
-        st.session_state["agent_auto_refresh"] = False
+    if status in ("running", "queued") and st.session_state.get("agent_auto_refresh"):
+        _agent_live_progress(run_id)
+    else:
+        _render_agent_run_panel(run_id)
+        if status in ("success", "failed", "blocked", "cancelled"):
+            st.session_state["agent_auto_refresh"] = False
 
 st.divider()
 
@@ -349,7 +405,7 @@ with col_info1:
 7. **抽取** → 完成後抽取任務特定結果
 
 **安全防護：**
-- 每任務 10–15 步（search/form 較多）
+- 每任務 10–20 步（search + 資訊整理較多）
 - 完成時驗證結果是否在頁面中（防 LLM 幻覺）
 - 最多 25 次 LLM 呼叫（預算控制）
 - 分類式恢復（每次失敗最多 2 種策略）
@@ -378,7 +434,3 @@ with col_info2:
 - ⚠️ 需要有效的 LLM API Key
 """)
 
-# Auto-refresh while agent is running
-if st.session_state.get("agent_auto_refresh"):
-    time.sleep(3)
-    st.rerun()

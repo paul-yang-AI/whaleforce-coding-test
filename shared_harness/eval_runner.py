@@ -379,7 +379,7 @@ def evaluate_agent_task(
     from task1_agent.agent.loop import run as agent_run
 
     task_id = task["id"]
-    run_id = job_store.create_run("agent")
+    run_id = job_store.create_run("agent", label=task.get("description", task_id)[:120])
     t0 = time.perf_counter()
     result = agent_run(
         task_description=task["description"],

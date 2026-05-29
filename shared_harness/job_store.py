@@ -38,14 +38,14 @@ def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
 def _ensure_schema(conn: sqlite3.Connection) -> None:
     global _schema_initialized
     with _lock:
-        if _schema_initialized:
-            return
-        conn.executescript(
-            """
+        if not _schema_initialized:
+            conn.executescript(
+                """
             CREATE TABLE IF NOT EXISTS runs (
                 id TEXT PRIMARY KEY,
                 task_type TEXT NOT NULL,
                 status TEXT NOT NULL DEFAULT 'queued',
+                label TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
@@ -75,23 +75,33 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
                 created_at TEXT NOT NULL
             );
             """
-        )
+            )
+            conn.commit()
+            _schema_initialized = True
+        _migrate_schema(conn)
+
+
+def _migrate_schema(conn: sqlite3.Connection) -> None:
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(runs)").fetchall()}
+    if "label" not in cols:
+        conn.execute("ALTER TABLE runs ADD COLUMN label TEXT")
         conn.commit()
-        _schema_initialized = True
 
 
 def _utcnow() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def create_run(task_type: str, run_id: str | None = None) -> str:
+def create_run(task_type: str, run_id: str | None = None, *, label: str | None = None) -> str:
     rid = run_id or str(uuid.uuid4())
     now = _utcnow()
+    label = (label or "").strip() or None
     conn = get_connection()
     try:
         conn.execute(
-            "INSERT INTO runs (id, task_type, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-            (rid, task_type, "queued", now, now),
+            "INSERT INTO runs (id, task_type, status, label, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (rid, task_type, "queued", label, now, now),
         )
         conn.commit()
     finally:
@@ -143,7 +153,7 @@ def list_recent_runs(*, limit: int = 30, task_type: str | None = None) -> list[d
         if task_type:
             rows = conn.execute(
                 """
-                SELECT r.id, r.task_type, r.status, r.created_at, r.updated_at,
+                SELECT r.id, r.task_type, r.status, r.label, r.created_at, r.updated_at,
                        COUNT(DISTINCT s.id) AS step_count,
                        COALESCE((SELECT SUM(usd) FROM cost_events c WHERE c.run_id = r.id), 0) AS usd_total,
                        COALESCE((SELECT COUNT(*) FROM cost_events c WHERE c.run_id = r.id), 0) AS llm_calls
@@ -159,7 +169,7 @@ def list_recent_runs(*, limit: int = 30, task_type: str | None = None) -> list[d
         else:
             rows = conn.execute(
                 """
-                SELECT r.id, r.task_type, r.status, r.created_at, r.updated_at,
+                SELECT r.id, r.task_type, r.status, r.label, r.created_at, r.updated_at,
                        COUNT(DISTINCT s.id) AS step_count,
                        COALESCE((SELECT SUM(usd) FROM cost_events c WHERE c.run_id = r.id), 0) AS usd_total,
                        COALESCE((SELECT COUNT(*) FROM cost_events c WHERE c.run_id = r.id), 0) AS llm_calls

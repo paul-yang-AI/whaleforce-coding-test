@@ -41,6 +41,14 @@ def test_extract_search_query_chinese_compound_summary() -> None:
 
 
 @pytest.mark.unit
+def test_task_implies_summary_chinese_info_request() -> None:
+    task = "搜尋富邦勇士並給我一些資訊"
+    assert task_implies_search(task)
+    assert task_implies_summary(task)
+    assert extract_search_query(task) == "富邦勇士"
+
+
+@pytest.mark.unit
 def test_normalize_type_action_fills_missing_value() -> None:
     sel, val, used = normalize_type_action(
         "Search Google for playwright automation",
