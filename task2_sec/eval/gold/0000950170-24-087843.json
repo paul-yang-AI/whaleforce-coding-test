@@ -38,16 +38,16 @@
     "3": {
       "status": "extracted",
       "confidence": 0.95,
-      "text_len": 267,
+      "text_len": 204,
       "start": 161892,
-      "end": 162159
+      "end": 162096
     },
     "4": {
       "status": "extracted",
       "confidence": 0.95,
-      "text_len": 13956,
-      "start": 4424,
-      "end": 18380
+      "text_len": 63,
+      "start": 162096,
+      "end": 162159
     },
     "5": {
       "status": "extracted",

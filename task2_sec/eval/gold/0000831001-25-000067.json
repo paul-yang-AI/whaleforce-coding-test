@@ -10,9 +10,9 @@
     "1A": {
       "status": "extracted",
       "confidence": 0.95,
-      "text_len": 1080144,
+      "text_len": 237459,
       "start": 174024,
-      "end": 1254168
+      "end": 411483
     },
     "1B": {
       "status": "extracted",
@@ -43,9 +43,9 @@
     "4": {
       "status": "extracted",
       "confidence": 0.95,
-      "text_len": 312,
+      "text_len": 467,
       "start": 4461,
-      "end": 4773
+      "end": 4928
     },
     "5": {
       "status": "missing",
@@ -67,16 +67,16 @@
     "7A": {
       "status": "extracted",
       "confidence": 0.95,
-      "text_len": 98,
-      "start": 4773,
-      "end": 4871
+      "text_len": 146091,
+      "start": 411483,
+      "end": 557574
     },
     "8": {
       "status": "extracted",
       "confidence": 0.95,
-      "text_len": 57,
-      "start": 4871,
-      "end": 4928
+      "text_len": 696594,
+      "start": 557574,
+      "end": 1254168
     },
     "9": {
       "status": "extracted",

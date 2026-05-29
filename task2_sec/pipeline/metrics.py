@@ -18,6 +18,7 @@ _SECTION_TITLE_RE = re.compile(
     r"Certain\s+Relationships|Principal\s+Account|Exhibits?\s+and\s+Financial|"
     r"Form\s+10-K\s+Summary|Changes\s+in\s+and\s+Disagreements|Properties|"
     r"Legal\s+Proceedings|Mine\s+Safety|Market\s+for\s+Registrant|Other\s+Information|"
+    r"Market\s+Risk|Report\s+of\s+Independent|"
     r"Business)",
     re.IGNORECASE,
 )

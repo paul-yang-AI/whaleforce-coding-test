@@ -20,6 +20,7 @@
 - [任務二：SEC 10-K 抽取](#任務二sec-10-k-抽取)
 - [LLM 模型級聯](#llm-模型級聯litellm)
 - [評估系統](#評估系統)
+- [Eval Set 選樣理由與侷限](#eval-set-選樣理由與侷限)
 - [分析報告：效能、成本、擴充性與正確性驗證](#分析報告效能成本擴充性與正確性驗證)
 - [測試](#測試)
 - [設定與環境變數](#設定與環境變數)
@@ -230,6 +231,7 @@ whaleforce-coding-test/
 
 - **以引用併入（incorporated by reference）**：很多公司的 Item 10–14 會寫「內容見委託書（Proxy/DEF 14A）」。管線偵測到後**不會編造內文**，而是標記狀態並（在已知 CIK 時）自動連結到原文。
 - **交叉引用索引（cross-reference index）**：像 INTC 這類非標準格式的 10-K，會用一張「Item → 頁碼」索引表，例如「Item 1. Business … Pages 3-4, 13」。這類短小且以頁碼為主的條目會被 `is_page_reference_text` 辨識為交叉引用，UI 上以「（交叉引用）」標註並引導使用者查看官方原文，而不是把索引列當成內文展示。
+- **銀行 TOC 索引列（裸頁碼）**：像 Citi 這類 filing 在開頭有一大段「Item 標題 + 裸頁碼範圍（如 70–129, 174–178）」的目錄列，內文卻只用章節標題（如 `MARKET RISK`、`Report of Independent…`）而不再寫 `Item 7A`。管線會：(1) 辨識裸頁碼索引列；(2) 動態偵測 TOC 區塊；(3) 捨棄 TOC stub 並改用章節名 / 替代標題錨點（如 `Market Risk\nOverview` → Item 7A）定位真實內文。
 
 ### 範例 filing
 
@@ -237,7 +239,7 @@ whaleforce-coding-test/
 |---|---|---|
 | **MSFT** | `0000950170-24-087843` | 6.8 MB iXBRL、標準 TOC，22 個 Item 全數抽取，$0.00 |
 | **INTC** | `0000050863-25-000009` | 重度 iXBRL + 交叉引用索引；部分 Item 為頁碼索引（見上） |
-| **Citi (C)** | `0000831001-25-000067` | Item 10–14 以引用併入；Business、Mine Safety 走章節名兜底 |
+| **Citi (C)** | `0000831001-25-000067` | 大型銀行 TOC + incorporated by reference；Item 7/7A/8 需跳過 TOC 索引列，7A 走 `Market Risk\nOverview` 替代標題 |
 | **BRK.B** | `0000950170-25-025210` | Heldout，K-1 式 TOC 變體；本地快照 4/4 必需項、21 項抽取 |
 
 **反過度擬合措施**：管線程式碼裡**沒有任何按 ticker / accession 的特判分支**；覆蓋率以「完整正規化 body」為分母計算；gold 邊界由管線輸出再生成（這點是循環的，已在 `docs/analysis.md` 中如實說明）。
@@ -272,6 +274,29 @@ whaleforce-coding-test/
   - `baseline_comparison.json`：regex-only vs 樸素 LLM vs 混合方案的對比。
 
 評估頁（Eval）支援「📂 載入存檔結果」（瞬間顯示已提交基線）與「重跑」兩種方式。
+
+---
+
+## Eval Set 選樣理由與侷限
+
+目前 train 集 3 檔 + heldout 1 檔，**刻意覆蓋不同格式變異**，但也必須誠實說明侷限：
+
+| Filing | 代表的變異維度 | 走到的程式路徑 |
+|---|---|---|
+| **MSFT** | 標準 iXBRL、規矩 Item 標題 | TOC + regex（happy path） |
+| **INTC** | 交叉引用索引格式（Item → 頁碼） | regex + `is_page_reference_text` |
+| **Citi** | 金融業、超大 TOC、incorporated by reference、裸頁碼索引 | section_name 替代標題 + TOC stub 清除 |
+| **BRK.B**（heldout） | K-1 式 TOC 變體 | section_name |
+
+**共同點（也是盲點）**：全是 2024–2025 近期檔、超大型股、主流申報工具產生的 iXBRL。以下變異軸**尚未納入** eval，但已在 Future Work / 擴充計畫中討論：
+
+- 舊式 pre-iXBRL 純 HTML（2007–2010 `<font>`/table 排版）
+- 小型股 / Smaller Reporting Company（雜亂 HTML、精簡揭露）
+- REIT / 礦業（Item 4 Mine Safety 有真實內容）
+- 10-K/A 修正件（Part III 補件、其餘 item 合法缺漏）
+- 同公司跨年度格式漂移（縱向對照）
+
+**已知 eval 方法論限制**：gold 邊界由管線輸出再生成（循環）；`required_items` 只看狀態是否 `extracted`，不量測內容品質——因此我們同時用 span/token/header 契約與手動 spot-check（如 Citi 7A 從 98 字 TOC 列修正為 14 萬字真實 `MARKET RISK` 內文）來補足。
 
 ---
 

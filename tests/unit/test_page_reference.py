@@ -1,6 +1,6 @@
 import pytest
 
-from task2_sec.pipeline.segment import is_page_reference_text
+from task2_sec.pipeline.segment import _is_page_reference_only, is_page_reference_text
 
 # Real strings observed in INTC's cross-reference-format 10-K (0000050863-25-000009).
 _INTC_ITEM1_INDEX = (
@@ -49,6 +49,16 @@ def test_substantial_prose_with_single_page_mention_not_flagged() -> None:
         "page 5 of this annual report for the fiscal year."
     )
     assert is_page_reference_text(text) is False
+
+
+@pytest.mark.unit
+def test_citi_style_bare_page_range_index_is_flagged() -> None:
+    text = (
+        "\nItem 7A.\nQuantitative and Qualitative Disclosures About Market Risk\n"
+        "70–129, 174–178, 198–238, 245–292\n"
+    )
+    assert is_page_reference_text(text) is True
+    assert _is_page_reference_only(text) is True
 
 
 @pytest.mark.unit

@@ -153,6 +153,29 @@ The three-layer fallback and contract-driven evaluation make this pipeline suita
 
 ---
 
+## Eval Set Sampling Rationale & Limitations
+
+Train split (3 filings) + heldout (BRK.B) were chosen to stress **different structural variants**, not to maximize ticker count:
+
+| Filing | Variant stressed | Pipeline path exercised |
+|--------|------------------|-------------------------|
+| MSFT | Standard iXBRL + Item headers | TOC + regex |
+| INTC | Cross-reference index (Item → page) | regex + `is_page_reference_text` |
+| Citi | Bank mega-TOC + bare page ranges + incorporation | TOC stub scrub + alternate section titles |
+| BRK.B (heldout) | K-1-style TOC | section_name |
+
+**What this set does NOT cover** (honest gaps for held-out generalization):
+
+- Pre-iXBRL HTML (2007–2010 `<font>`/table layouts)
+- Smaller Reporting Company filings with messy vendor HTML
+- REIT / mining (Item 4 Mine Safety with real prose)
+- 10-K/A amendment filings
+- Longitudinal drift (same issuer across years)
+
+**Methodology caveats**: gold boundaries are pipeline-generated (circular); `required_items` checks status only. We compensate with contract metrics (span/token/header) and targeted spot-checks — e.g. Citi Item 7A was corrected from a 98-char TOC index row (`70–129, 174–178…`) to 146k chars of real `MARKET RISK` content via alternate section-title anchors.
+
+---
+
 ## Observability
 
 - `cost_events`: per LLM call with `run_id`, `tier`, `call_site`, `attempt`, `usd`
