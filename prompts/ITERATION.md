@@ -1,18 +1,18 @@
-# Prompt Iteration Log
+# Prompt 迭代紀錄（Iteration Log）
 
-Record v1→v2 changes with Failed Path / Resolution / Validation.
+記錄 v1→v2 變更，每節含 **失敗路徑（Failed Path）** / **修正（Resolution）** / **驗證（Validation）**。
 
 ## deployment_fix: Agent LLM 打通 + SEC UI 重構 + LLM fallback 層 + 評估即時化
 
-- **Failed Path**: 部署後發現五個問題：
+- **失敗路徑**：部署後發現五個問題：
   1. 瀏覽器代理每步都 `plan_failed` — Gemini thinking 模型 `reasoning_effort="minimal"`
      導致 thinking tokens 消耗全部預算，`content=None` → `ValidationError` → 重試耗盡
   2. SEC 自訂報表用完後切回已註冊報表，仍讀到自訂報表值 — Streamlit widget state
      在 tab 切換時不清空，`if custom_accession.strip()` 永遠為 True
-  3. LLM 仲裁需手動勾選 checkbox（預設 False），使用者不知道要開啟
+  3. LLM 仲裁（Arbiter）需手動勾選 checkbox（預設 False），使用者不知道要開啟
   4. 評估儀表板一進頁面就讀 repo 裡的靜態 cache 結果，非即時
   5. 使用者需手動去外部網站找 accession number
-- **Resolution**:
+- **修正**：
   1. `llm_config.py`: `reasoning_effort` 改 `None`；`llm_router.py`: 偵測 `content is None`
      主動拋 `ValueError` 觸發重試（而非靜默返回空字串讓下游 parse 失敗）
   2. 每個 tab 各自放獨立的「開始抽取」按鈕 + `_run_source` flag 判斷來源
@@ -24,377 +24,393 @@ Record v1→v2 changes with Failed Path / Resolution / Validation.
   6. 新增 SEC LLM fallback 層：`SegmentMethod.LLM`，coverage < 30% 或 missing > 5 時觸發，
      LLM 只回傳 `(item_id, offset)` 偏移量，文字仍 `body[start:end]` 原文切割
   7. 新增 `scripts/e2e_smoke.py`：push 前驗證 LLM、SEC pipeline、Agent planning
-- **Validation**: 65 tests pass; LLM empty-content 檢測在 `_invoke` 層攔截；
+- **驗證**：65 tests pass；LLM empty-content 檢測在 `_invoke` 層攔截；
   tab 切換 bug 透過獨立按鈕 + source flag 根治；LLM fallback 層不影響 Tier0 測試
   （`use_llm_fallback=False` 在 tier0-only 測試中明確禁用）。
 
-## infra_fix: MSFT cache + litellm upgrade + normalize robustness
+## infra_fix: MSFT cache + litellm 升級 + normalize 穩健性
 
-- **Failed Path**: Three critical infrastructure issues:
-  1. MSFT cache file was a 1,825-byte fake mock (hand-written HTML with dummy text),
-     not the real 6.86 MB EDGAR 10-K filing. Accession `0000789019-24-000045` was wrong —
-     the actual MSFT FY2024 10-K accession is `0000950170-24-087843`.
-  2. `litellm==1.55.0` couldn't parse Gemini 2.5/3 thinking model responses — returned
-     `content=None` because reasoning tokens consumed the `max_tokens` budget, leaving
-     zero text tokens. This caused `ValidationError` → retries exhausted → 
-     `AllProvidersFailed` → "LLM planner unavailable" on every agent run.
-  3. `normalize.py` crashed with `AttributeError: 'NoneType' object has no attribute 'get'`
-     on real MSFT filing (malformed HTML where `tag.attrs` is `None`).
-- **Resolution**:
-  1. Fixed MSFT accession in `manifest.json`, re-downloaded real filing (6.86 MB),
-     regenerated gold files. Updated all references (`.gitignore`, README, tests).
-  2. Upgraded `litellm>=1.86.0` — properly handles Gemini thinking tokens.
-     `gemini-3-flash-preview` and `gemini-3.1-pro-preview` now return content correctly.
-  3. Added `if tag.attrs is None: continue` guard in `_remove_hidden_elements`.
-  4. Fixed `eval_runner.py` gold comparison: excluded incorporated items (no `start`/`end`)
-     from boundary matching total.
-- **Validation**: 46 unit tests pass; 3/3 SEC filings pass eval (MSFT now 22/22 extracted,
-  char_coverage 0.9877); Gemini API calls return proper content.
+- **失敗路徑**：三個關鍵基礎設施問題：
+  1. MSFT cache 檔僅 1,825 byte 假 mock（手寫 HTML 假文字），非真實 6.86 MB EDGAR 10-K。
+     Accession `0000789019-24-000045` 錯誤 — 正確 MSFT FY2024 10-K 為 `0000950170-24-087843`。
+  2. `litellm==1.55.0` 無法解析 Gemini 2.5/3 thinking 回應 — reasoning tokens 耗盡
+     `max_tokens` 預算，文字 tokens 為零 → `content=None` → `ValidationError` → 重試耗盡 →
+     `AllProvidersFailed` → 每次 agent run 都「LLM planner unavailable」。
+  3. `normalize.py` 在真實 MSFT filing 上 crash：`AttributeError: 'NoneType' object has no attribute 'get'`
+     （畸形 HTML 中 `tag.attrs` 為 `None`）。
+- **修正**：
+  1. 修正 `manifest.json` 中 MSFT accession，重新下載真實 filing（6.86 MB），
+     重新產生 gold 檔；更新所有引用（`.gitignore`、README、tests）。
+  2. 升級 `litellm>=1.86.0` — 正確處理 Gemini thinking tokens；
+     `gemini-3-flash-preview` 與 `gemini-3.1-pro-preview` 可正常回傳 content。
+  3. 在 `_remove_hidden_elements` 加入 `if tag.attrs is None: continue` 防護。
+  4. 修正 `eval_runner.py` gold 比對：incorporated items（無 `start`/`end`）不計入邊界匹配總數。
+- **驗證**：46 個 unit tests 通過；SEC 3/3 filing 通過 eval（MSFT 22/22 extracted，
+  char_coverage 0.9877）；Gemini API 呼叫回傳正常 content。
 
-## boundary_arbiter: v1 → v2 (regex fallback + prompt hardening)
+## boundary_arbiter: v1 → v2（regex fallback + prompt 強化）
 
-- **Failed Path**: Initial regex `ITEM\s+\d+` matched inline cross-references like
-  "see Item 1 above" as segment headers, causing false boundary splits mid-paragraph.
-  Additionally, `v1_boundary_arbiter.txt` lacked explicit constraint against summarization,
-  leading to potential token ratio violations when arbiter is invoked.
-- **Resolution**: Anchored `HEADER_RE` to line-start (`(?m)^[ \t]*`) in `segment.py`;
-  added negative-sample assertions in `test_regex_boundary_fallback.py` to reject
-  body-inline mentions. Longer item IDs match first (e.g. "10" before "1").
-  Promoted to `prompts/v2_boundary_arbiter.txt` adding: ratio constraint (≥0.85),
-  trailing whitespace rule, and explicit negative constraints for numerical preservation.
-  Synced into `prompts/sops/boundary_arbiter.md` (runtime load path via `prompt_loader`).
-- **Validation**: `test_regex_boundary_fallback` green — negative sample
-  `"see Item 1 above"` no longer produces a segment hit; `pytest -m unit` all pass.
+- **失敗路徑**：初始 regex `ITEM\s+\d+` 會把內文交叉引用（如 "see Item 1 above"）
+  誤判為 segment header，造成段落中段錯誤切分。此外 `v1_boundary_arbiter.txt` 缺少
+  明確禁止摘要的約束，arbiter 被呼叫時可能違反 token ratio。
+- **修正**：在 `segment.py` 將 `HEADER_RE` 錨定到行首（`(?m)^[ \t]*`）；
+  在 `test_regex_boundary_fallback.py` 加入 negative sample 斷言，拒絕內文 inline 提及。
+  較長 item ID 優先匹配（如 "10" 在 "1" 之前）。升級為 `prompts/v2_boundary_arbiter.txt`，
+  新增 ratio 約束（≥0.85）、尾端空白規則、數值保留的明確負向約束。
+  同步至 `prompts/sops/boundary_arbiter.md`（runtime 透過 `prompt_loader` 載入）。
+- **驗證**：`test_regex_boundary_fallback` 通過 — negative sample `"see Item 1 above"`
+  不再產生 segment hit；`pytest -m unit` 全綠。
 
 ## incorporation_by_reference: Citi Items 10–14
 
-- **Failed Path**: Pipeline initially reported Items 10–14 as `extracted` with full text
-  that was actually just a one-line incorporation notice, misleading eval metrics.
-- **Resolution**: Added `detect_incorporation()` in `task2_sec/pipeline/incorporation.py`
-  using regex to detect "incorporated by reference" language; status set to
-  `incorporated_by_reference` with `text=None` to avoid hallucinating content.
-- **Validation**: `test_item_status::test_incorporation_by_reference_no_fake_fulltext` green;
-  `test_sec_manifest_citi_incorporation` confirms Items 10 and 14 correctly flagged.
+- **失敗路徑**：管線最初將 Items 10–14 標為 `extracted` 並附完整文字，
+  實際僅為一行 incorporation 聲明，誤導 eval 指標。
+- **修正**：在 `task2_sec/pipeline/incorporation.py` 新增 `detect_incorporation()`，
+  以 regex 偵測 "incorporated by reference" 語句；狀態設為 `incorporated_by_reference`，
+  `text=None`，避免幻覺內容。
+- **驗證**：`test_item_status::test_incorporation_by_reference_no_fake_fulltext` 通過；
+  `test_sec_manifest_citi_incorporation` 確認 Items 10、14 正確標記。
 
-## agent_recovery: v1 → v2 (classified routing vs blind retry)
+## agent_recovery: v1 → v2（分類路由 vs 盲目重試）
 
-- **Failed Path**: Initial agent design used a generic `try/except → retry` loop. Same
-  recovery action was attempted repeatedly (e.g. re-clicking the same missing element),
-  burning LLM calls without progress and triggering `MaxLLMCalls` breaker.
-  `v1_recovery.txt` was a flat instruction with no failure-type awareness.
-- **Resolution**: Introduced `FailureType` enum + `STRATEGY_TABLE` in `recovery.py`.
-  `get_next_strategy(failure_type, attempted)` returns the next *untried* strategy;
-  `MAX_RECOVERY_PER_STEP = 2` caps retries. `prompt_loader.load_prompt("recovery",
-  variant=failure_type)` injects the matching SOP fragment from `prompts/sops/recovery.md`.
-  Promoted to `prompts/v2_recovery.txt` with per-failure-type strategy options,
-  explicit "do NOT repeat" constraint, and JSON-only output format.
-  **Runtime note**: Recovery is deterministic via `STRATEGY_TABLE` — no per-step LLM call.
-  `sops/recovery.md` and `v2_recovery.txt` document the strategy catalog for reviewers
-  and a possible future LLM-guided recovery path.
-- **Validation**: `test_recovery_routing` (9 assertions) green — `ACTION_NO_EFFECT` returns
-  different strategies on each call; exhausted strategies return `None`; `CAPTCHA_OR_LOGIN`
-  always returns `blocked`. L2 `test_agent_recovery_loop` confirms recovery→success and
-  exhaustion→failed paths work end-to-end.
-  New L2 `test_verify_blind_critic_gate` confirms critic NO → run fails (silent_failure=0).
+- **失敗路徑**：初始 agent 使用通用 `try/except → retry` 迴圈，同一 recovery 動作
+  反覆嘗試（如重複點擊同一缺失元素），消耗 LLM 呼叫卻無進展，觸發 `MaxLLMCalls` 熔斷。
+  `v1_recovery.txt` 為扁平指令，無 failure-type 感知。
+- **修正**：在 `recovery.py` 引入 `FailureType` enum + `STRATEGY_TABLE`。
+  `get_next_strategy(failure_type, attempted)` 回傳下一個*未嘗試*策略；
+  `MAX_RECOVERY_PER_STEP = 2` 上限。`prompt_loader.load_prompt("recovery", variant=failure_type)`
+  從 `prompts/sops/recovery.md` 注入對應 SOP 片段。升級為 `prompts/v2_recovery.txt`，
+  含 per-failure-type 策略、明確「do NOT repeat」約束、JSON-only 輸出格式。
+  **Runtime 備註**：Recovery 透過 `STRATEGY_TABLE` 確定性執行 — 每步無 LLM 呼叫。
+  `sops/recovery.md` 與 `v2_recovery.txt` 記錄策略目錄，供 reviewer 與未來 LLM-guided recovery 參考。
+- **驗證**：`test_recovery_routing`（9 assertions）通過 — `ACTION_NO_EFFECT` 每次回傳不同策略；
+  策略耗盡回傳 `None`；`CAPTCHA_OR_LOGIN` 恆回傳 `blocked`。L2 `test_agent_recovery_loop`
+  確認 recovery→success 與 exhaustion→failed 端到端路徑。新增 L2 `test_verify_blind_critic_gate`
+  確認 critic NO → run 失敗（silent_failure=0）。
 
-## agent_plan: v1 → v2 (multi-step execution + result extraction)
+## agent_plan: v1 → v2（多步執行 + 結果抽取）
 
-- **Failed Path**: v1 agent treated step 0 (navigation) as potentially task-complete — if
-  the page loaded and verify passed, the loop broke immediately. This meant search tasks
-  (DuckDuckGo, Wikipedia) and extraction tasks (Hacker News top story) would always fail
-  because the agent never interacted with the page beyond loading it. Output was limited
-  to status only (success/failed), with no task-specific result.
-- **Resolution**: Redesigned loop in `loop.py` — step 0 ALWAYS continues to LLM planning;
-  steps 1+ use `_plan_next_action()` to determine actions (click, type, scroll, etc.) and
-  declare `done=true` with a `result` field only when the task is genuinely complete.
-  Updated `AgentAction` schema with `result: str` field. Updated `v1_agent_plan.txt` to
-  instruct: "do NOT set done=true just because the page loaded; fill result when done."
-- **Validation**: All 58 tests pass (46 unit + 12 integration); `test_agent_recovery_loop`
-  and `test_verify_blind_critic_gate` confirm multi-step flow works correctly with
-  recovery and Blind Critic gate. Train success rate improved from 4/6 → 6/6.
+- **失敗路徑**：v1 agent 將 step 0（navigation）視為可能已完成 — 頁面載入且 verify 通過即跳出迴圈。
+  搜尋任務（DuckDuckGo、Wikipedia）與抽取任務（Hacker News 頭條）恆失敗，因 agent 載入後
+  不再與頁面互動。輸出僅 status（success/failed），無任務專屬 result。
+- **修正**：在 `loop.py` 重設計迴圈 — step 0 **一律**進入 LLM planning；steps 1+ 用
+  `_plan_next_action()` 決定動作（click、type、scroll 等），僅在任務真正完成時
+  宣告 `done=true` 並填 `result`。更新 `AgentAction` schema 加入 `result: str`。
+  更新 `v1_agent_plan.txt`：「勿因頁面載入即設 done=true；完成時填 result。」
+- **驗證**：58 tests 全過（46 unit + 12 integration）；`test_agent_recovery_loop` 與
+  `test_verify_blind_critic_gate` 確認多步流程與 recovery、Blind Critic gate 正常。
+  Train 成功率由 4/6 → 6/6。
 
-## segment: v2 → v3 (TOC avoidance + page-reference upgrade + section-name generalization)
+## segment: v2 → v3（TOC 迴避 + 頁碼引用升級 + section-name 泛化）
 
-- **Failed Path**: INTC 10-K has a "Form 10-K Cross-Reference Index" acting as TOC —
-  `_pick_best_start` with 3% exclusion zone was too narrow, picking TOC page references
-  (e.g. "Item 1. Business: Pages 3-4") instead of actual content sections. Items 10–14
-  had `(a)` footnote markers referencing Proxy Statement but were classified as `extracted`.
-  `_SECTION_NAME_MAP` lacked Item 1 (Business), 2 (Properties), 3 (Legal Proceedings),
-  4 (Mine Safety) — these Items failed `section_name` fallback on filings that don't use
-  "Item N" headers in the content body.
-- **Resolution**:
-  1. Widened `_pick_best_start` exclusion to 5% + prefer **first** content-area match
-  2. Added `_upgrade_short_segments`: post-merge filter detects page-reference-only items
-     (<500 chars, just "Pages X-Y" text) and replaces with `section_name` matches
-  3. Added `_is_page_reference_only` heuristic (strip page refs, item headers, part labels)
-  4. Extended `_SECTION_NAME_MAP` with Business→1, Properties→2, Legal Proceedings→3,
-     Mine Safety→4; aligned `_SECTION_TITLE_RE` in `metrics.py`
-  5. Enhanced `incorporation.py`: `(a)`/`(b)` footnote marker detection for Proxy Statement
-     references (INTC-style short items ending with `(a)`)
-- **Validation**: 65 tests pass; INTC Items 10–14 → `incorporated_by_reference`;
-  Citi Items 10–14 → `incorporated_by_reference`; Citi Item 1 found via section_name
-  (was `missing`). `char_coverage` now uses full body length (honest metric).
+- **失敗路徑**：INTC 10-K 有 "Form 10-K Cross-Reference Index" 充當 TOC —
+  `_pick_best_start` 3% 排除區過窄，選到 TOC 頁碼引用（如 "Item 1. Business: Pages 3-4"）
+  而非真實正文。Items 10–14 有 `(a)` 腳註指向 Proxy Statement 卻被標為 `extracted`。
+  `_SECTION_NAME_MAP` 缺少 Item 1（Business）、2（Properties）、3（Legal Proceedings）、
+  4（Mine Safety）— 內文無 "Item N" 標題的 filing 上 section_name fallback 失敗。
+- **修正**：
+  1. 將 `_pick_best_start` 排除區放寬至 5%，優先**第一個** content-area 匹配
+  2. 新增 `_upgrade_short_segments`：合併後過濾偵測僅頁碼引用項（<500 chars、僅 "Pages X-Y"），
+     以 `section_name` 匹配替換
+  3. 新增 `_is_page_reference_only` 啟發式（剝除 page refs、item headers、part labels）
+  4. 擴充 `_SECTION_NAME_MAP`：Business→1、Properties→2、Legal Proceedings→3、Mine Safety→4；
+     對齊 `metrics.py` 中 `_SECTION_TITLE_RE`
+  5. 強化 `incorporation.py`：`(a)`/`(b)` 腳註偵測 Proxy Statement 引用（INTC 式短項以 `(a)` 結尾）
+- **驗證**：65 tests 通過；INTC Items 10–14 → `incorporated_by_reference`；
+  Citi Items 10–14 → `incorporated_by_reference`；Citi Item 1 經 section_name 找到（原 `missing`）。
+  `char_coverage` 改以完整 body 長度計算（誠實指標）。
 
-## anti-overfitting: v1 (contract-driven eval + baseline comparison + UI localization)
+## anti-overfitting: v1（契約驅動 eval + 基線對照 + UI 中文化）
 
-- **Failed Path**: Gold files in `task2_sec/eval/gold/` are generated from pipeline output — 
-  circular evaluation inflates metrics. Heuristics (`_SECTION_NAME_MAP`, INTC footnote `(a)` 
-  detection) could appear tuned to specific filings. No quantitative comparison against simpler
-  approaches to justify the hybrid architecture's value.
-- **Resolution**:
-  1. Documented **Contract-Driven Evaluation** in `docs/analysis.md`: three deterministic 
-     contracts (span integrity, token conservation, header retention) that hold on *any* filing 
-     regardless of format — no ground truth needed
-  2. Added **Baseline Comparison** table: Regex-Only vs Naive LLM vs Hybrid Pipeline with 
-     concrete metrics (items found, incorporation detection, cost, token ratio)
-  3. Added **Real-World Application** scenarios: Compliance Monitoring, QA Agent, Financial 
-     Data Aggregation, Regulatory Audit — showing the architecture extends beyond this test
-  4. Added **Entropy Gradient Routing** to Future Work in README.md — adaptive LLM tier 
-     selection based on item confidence
-  5. **UI全中文化**：Streamlit 四頁面（首頁、SEC 10-K、瀏覽器代理、評估儀表板）全部
-     改為繁體中文，載入 Noto Sans TC 字體，統一 font-weight 和 letter-spacing
-- **Validation**: No ticker-specific branching in pipeline code; all heuristics use generic 
-  patterns (regex anchored to SEC standard item format); `_SECTION_NAME_MAP` covers standard 
-  10-K section titles per SEC Regulation S-K, not individual filing quirks.
+- **失敗路徑**：`task2_sec/eval/gold/` 的 gold 檔由 pipeline 輸出產生 — circular evaluation
+  膨脹指標。啟發式（`_SECTION_NAME_MAP`、INTC `(a)` 腳註偵測）看似針對特定 filing 調參。
+  缺少與更簡單方案的量化對照，難以證明 hybrid 架構價值。
+- **修正**：
+  1. 在 `docs/analysis.md` 記載 **Contract-Driven Evaluation（契約驅動評估）**：
+     三項確定性契約（span integrity、token conservation、header retention），
+     對*任意* filing 格式成立 — 無需 ground truth
+  2. 新增 **Baseline Comparison（基線對照）** 表：Regex-Only vs Naive LLM vs Hybrid Pipeline，
+     含具體指標（items found、incorporation 偵測、成本、token ratio）
+  3. 新增 **Real-World Application（真實應用）** 情境：合規監控、QA Agent、
+     財務資料聚合、監管稽核 — 展示架構可延伸超出本測驗
+  4. 在 README.md Future Work 加入 **Entropy Gradient Routing（熵梯度路由）** —
+     依 item confidence 自適應選 LLM tier
+  5. **UI 全中文化**：Streamlit 四頁面（首頁、SEC 10-K、瀏覽器代理、評估儀表板）改繁體中文，
+     載入 Noto Sans TC，統一 font-weight 與 letter-spacing
+- **驗證**：pipeline 程式碼無 ticker-specific 分支；所有啟發式用通用 pattern
+  （regex 錨定 SEC 標準 item 格式）；`_SECTION_NAME_MAP` 涵蓋 SEC Regulation S-K 標準
+  10-K 章節標題，非個別 filing 怪癖。
 
-## max_tokens_and_sec_ui: Gemini thinking budget + CIK auto-lookup + 自訂報表 UX
+## max_tokens_and_sec_ui: Gemini thinking 預算 + CIK 自動查詢 + 自訂報表 UX
 
-- **Failed Path**: Three issues:
-  1. `max_tokens` too low across codebase (64–1024). Gemini 2.5/3 thinking models allocate
-     tokens for *both* reasoning and text output from the same budget — low `max_tokens` causes
-     all tokens to be consumed by thinking, returning `content=None`. This was the root cause
-     of `AllProvidersFailed` / "LLM planner unavailable" errors even after litellm upgrade.
-  2. `resolve_filing_url` extracted CIK from accession prefix — but the prefix often belongs
-     to the *filing agent* (e.g. Donnelley Financial, CIK 0000950170) not the *company*
-     (e.g. MSFT, CIK 789019). ~40%+ of custom filing lookups would fail with 404.
-  3. Custom filing UI had no CIK input field and unhelpful English-only error messages.
-- **Resolution**:
-  1. Increased `max_tokens`: `llm_router.py` default 1024→4096, `loop.py` 512→4096,
-     `verify.py` blind_critic 64→1024, `smoke_llm_models.py` 32→256. Gemini has 65K output
-     token limit — these values leave ample room for thinking + structured output.
-  2. Rewrote `resolve_filing_url` with multi-CIK-candidate strategy: tries provided CIK,
-     accession-prefix CIK, then EDGAR submissions API (`data.sec.gov/submissions/`) auto-lookup.
-     Error messages in Chinese with actionable fix suggestions.
-  3. Added CIK input field to SEC 10-K page with helper text; added contextual error messages
-     (format hints, common causes) when extraction fails.
-- **Validation**: All LLM call sites have `max_tokens` ≥ 256 (thinking-safe). CIK resolution
-  tested with MSFT (CIK 789019 via accession 0000950170-24-087843 — filing agent CIK
-  differs from company CIK). Custom filing UI shows CIK field with guidance.
+- **失敗路徑**：三個問題：
+  1. 全 codebase `max_tokens` 過低（64–1024）。Gemini 2.5/3 thinking 模型從同一預算
+     分配 reasoning 與文字輸出 — 低 `max_tokens` 導致 thinking 耗盡全部 tokens，
+     回傳 `content=None`。即使 litellm 升級後仍是 `AllProvidersFailed` /
+     "LLM planner unavailable" 根因。
+  2. `resolve_filing_url` 從 accession 前綴取 CIK — 前綴常屬 *filing agent*
+     （如 Donnelley Financial，CIK 0000950170）非 *公司*（如 MSFT，CIK 789019）。
+     ~40%+ 自訂 filing 查詢 404。
+  3. 自訂報表 UI 無 CIK 輸入欄，錯誤訊息僅英文且不具指引性。
+- **修正**：
+  1. 提高 `max_tokens`：`llm_router.py` 預設 1024→4096，`loop.py` 512→4096，
+     `verify.py` blind_critic 64→1024，`smoke_llm_models.py` 32→256。Gemini 65K output
+     token 上限 — 留足 thinking + 結構化輸出空間。
+  2. 重寫 `resolve_filing_url` 多 CIK 候選策略：先 provided CIK、accession-prefix CIK，
+     再 EDGAR submissions API（`data.sec.gov/submissions/`）自動查詢。錯誤訊息改中文並附修正建議。
+  3. SEC 10-K 頁新增 CIK 輸入與 helper text；抽取失敗時顯示情境化錯誤（格式提示、常見原因）。
+- **驗證**：所有 LLM 呼叫點 `max_tokens` ≥ 256（thinking-safe）。CIK 解析以 MSFT 測試
+  （CIK 789019，accession 0000950170-24-087843 — filing agent CIK 與公司 CIK 不同）。
+  自訂報表 UI 顯示 CIK 欄與指引。
 
-## agent_reliability: v2 → v3 (budget tuning + keyword verify + error logging)
+## agent_reliability: v2 → v3（預算調校 + 關鍵字 verify + 錯誤日誌）
 
-- **Failed Path**: Zeabur agent runs showed `plan_failed` on all steps 1–9 within ~200ms
-  each — LLM was never called because `max_llm_calls_agent=8` was exhausted by retries
-  (`_MAX_PRIMARY_RETRIES=3`). Error messages were uninformative (`logger.debug`).
-  `verify_step` had `_extract_task_keywords` defined but never wired in — L0 verify only
-  checked page-not-empty, allowing `done=true` on wrong pages (silent failure risk).
-- **Resolution**:
-  1. Reduced `_MAX_PRIMARY_RETRIES` 3→2 (Plan: retry 1 + fallback 1)
-  2. Increased `max_llm_calls_agent` 8→25 (real capacity for 10-step tasks)
-  3. Increased `max_tokens` 256→512 for agent planning
-  4. Upgraded error logging to `logger.error` with `type(exc).__name__` detail
-  5. Wired `_extract_task_keywords` into `verify_step`: extracts domain names and
-     quoted strings from task description, checks presence in page text
-  6. Disabled OpenRouter fallback (`LLM_FALLBACK_ENABLED=false`) — focus on Gemini primary
-- **Validation**: 65 tests pass; Gemini Tier1+Tier2 smoke OK; `AllProvidersFailed` now
-  includes root cause in message for deployment debugging.
+- **失敗路徑**：Zeabur agent run 在 steps 1–9 每步 ~200ms 內 `plan_failed` —
+  LLM 從未被呼叫，因 `max_llm_calls_agent=8` 已被重試（`_MAX_PRIMARY_RETRIES=3`）耗盡。
+  錯誤訊息無資訊（`logger.debug`）。`verify_step` 定義 `_extract_task_keywords` 但未接入 —
+  L0 verify 僅檢查頁面非空，允許錯誤頁面 `done=true`（silent failure 風險）。
+- **修正**：
+  1. `_MAX_PRIMARY_RETRIES` 3→2（Plan：retry 1 + fallback 1）
+  2. `max_llm_calls_agent` 8→25（10 步任務實際容量）
+  3. agent planning `max_tokens` 256→512
+  4. 錯誤日誌升級為 `logger.error`，含 `type(exc).__name__` 細節
+  5. 將 `_extract_task_keywords` 接入 `verify_step`：從任務描述抽 domain 與引號字串，
+     檢查是否出現在頁面文字
+  6. 停用 OpenRouter fallback（`LLM_FALLBACK_ENABLED=false`）— 專注 Gemini primary
+- **驗證**：65 tests 通過；Gemini Tier1+Tier2 smoke OK；`AllProvidersFailed` 訊息
+  含根因，便於部署除錯。
 
-### `ux_polish` (2026-05-28)
-- **Failed path**: Post-deployment testing revealed 9 issues: Agent still failing (PDF URL crash),
-  evaluation dashboard showing misleading success rates, SEC tab-switching state leaks, Browser
-  Agent requiring manual refresh, incorporated-by-reference items lacking context, CIK not propagating
-  back from auto-resolution, and SEC item content rendered as plain text without structure.
-- **Resolution**:
-  1. **Eval honesty**: `evaluate_agent_task` now checks `navigate` tasks against expected domain;
-     `silent_failure` category catches tasks that claim success without verified output
-  2. **Auto-refresh**: Browser Agent page auto-reruns every 3s while task is running/queued;
-     refresh button removed; `agent_auto_refresh` session state flag controls the loop
-  3. **PDF/download URL detection**: `_is_download_url()` checks file extension before `page.goto()`;
-     returns descriptive error instead of Playwright crash; covers `.pdf`, `.zip`, `.xlsx`, etc.
-  4. **Homepage redesign**: Replaced metrics-heavy landing page with design document layout:
-     architecture cards, design decisions, pipeline flow diagrams, evaluation tier table
-  5. **SEC item rendering**: `_format_sec_text` now detects bullet lists (`•/-/*`), numbered lists,
-     tabular data (3+ columns separated by whitespace), and ALL-CAPS section headers
-  6. **Incorporated-by-reference UX**: Rich card with EDGAR DEF 14A search link, detected
-     reference text preview, and explanation of the SEC convention
-  7. **CIK propagation**: `resolve_filing_url` and `fetch_filing_html` now return `(url, cik)`
-     tuple; UI displays resolved CIK even when user only provided accession number
-- **Key insight**: LLM-as-unstable-engine principle applies to UX too — every user-facing state
-  transition must be validated, not just LLM outputs. The Browser Agent's "success" status was
-  trusted without verifying the final URL matched the expected domain.
-- **Validation**: unit tests, integration tests, e2e smoke test all pass locally.
+### `ux_polish`（2026-05-28）
 
-### `phase4_ux` (2026-05-28)
-- **Failed path**: Fixed 95% confidence displayed for all items (no information value); SEC text
-  readability still poor (wall of plain text); agent concurrent submits risk OOM; incorporation
-  items only linked to generic EDGAR search.
-- **Resolution**:
-  1. **Tier badge UX**: `ItemRecord.segment_method` propagated from `SegmentResult`; UI shows
-     Tier0 method badge + "contract passed" instead of 95% progress bar; low_confidence only
-     shows numeric score
-  2. **Readability**: `_format_sec_text` groups lines into `<p>` paragraphs; serif typography
-     CSS (`.sec-reader`) with max-width and justified text
-  3. **Agent concurrent guard**: disable submit + double-check when agent status is running/queued
-  4. **DEF 14A auto-link**: `find_proxy_filing(cik)` via SEC submissions API; incorporation
-     items show direct link to latest proxy accession
-  5. **README Known Limitations** expanded: ephemeral SQLite, iframe/shadow DOM, gold circularity
-- **Validation**: e2e smoke adds segment_method + PDF detection checks.
+- **失敗路徑**：部署後測試發現 9 項問題：Agent 仍失敗（PDF URL crash）、
+  評估儀表板成功率誤導、SEC tab 切換 state 洩漏、Browser Agent 需手動刷新、
+  incorporated-by-reference 項缺上下文、CIK 未從自動解析回傳、SEC item 以純文字無結構渲染。
+- **修正**：
+  1. **Eval 誠實性**：`evaluate_agent_task` 對 `navigate` 任務檢查預期 domain；
+     `silent_failure` 類別捕捉宣稱成功但無 verified output 的任務
+  2. **自動刷新**：Browser Agent 頁在 running/queued 時每 3s 自動 rerun；
+     移除刷新按鈕；`agent_auto_refresh` session state 控制迴圈
+  3. **PDF/下載 URL 偵測**：`_is_download_url()` 在 `page.goto()` 前檢查副檔名；
+     回傳描述性錯誤而非 Playwright crash；涵蓋 `.pdf`、`.zip`、`.xlsx` 等
+  4. **首頁重設計**：以設計文件版面取代 metrics 首頁：架構卡片、設計決策、
+     管線流程圖、評估層級表
+  5. **SEC item 渲染**：`_format_sec_text` 偵測 bullet list（`•/-/*`）、編號 list、
+     表格資料（3+ 欄空白分隔）、全大寫 section header
+  6. **Incorporated-by-reference UX**：豐富卡片含 EDGAR DEF 14A 搜尋連結、
+     偵測到的引用文字預覽、SEC 慣例說明
+  7. **CIK 傳播**：`resolve_filing_url` 與 `fetch_filing_html` 回傳 `(url, cik)` tuple；
+     UI 在使用者僅提供 accession 時仍顯示解析後 CIK
+- **關鍵洞察**：LLM-as-unstable-engine 原則也適用 UX — 每個使用者可見 state 轉換
+  都須驗證，非僅 LLM 輸出。Browser Agent「success」曾被信任而未驗證最終 URL 是否符合預期 domain。
+- **驗證**：unit、integration、e2e smoke 本地全過。
 
-### `agent_verify_fix` (2026-05-28)
-- **Failed path**: Step 0 verify used quoted task terms on landing pages → Wiki/DDG stuck in
-  recovery; `task_complete` trusted LLM `result` without page cross-check.
-- **Resolution** (generic — no site hardcoding):
-  1. Intermediate steps skip task keywords; step 0 uses navigation-only verify
-  2. `verify_task_outcome()` at done=true: quoted terms + extracted result in page/JSON
-  3. `infer_max_steps()` from task verbs (search/form 15, extract 12, default 10)
-  4. EDGAR search: ticker → company_tickers.json → submissions, then EFTS fallback
-- **Validation**: `tests/unit/test_agent_verify.py`.
+### `phase4_ux`（2026-05-28）
 
-### `agent_search_harness` (2026-05-28)
-- **Failed path**: Wiki/DDG search hit max_steps; httpbin flaky; UI showed unused OpenRouter;
-  Gemini 503 → immediate `plan_failed`; summarize tasks out of scope.
-- **Resolution** (generic):
-  1. Step 0 uses `verify_navigation`; search/find tasks auto-press Enter after type
-  2. Generic consent-banner dismiss on landing (Accept/Agree button labels)
-  3. Gemini primary infra retry (3× with backoff) before fallback
-  4. UI: Gemini-only env checks; document summarize limitation
-- **Validation**: agent eval **5/6** train (Wiki OK, DDG flaky); `docs/analysis.md` updated.
+- **失敗路徑**：所有 item 固定顯示 95% confidence（無資訊價值）；SEC 文字可讀性仍差
+  （整牆 plain text）；agent 並發提交 OOM 風險；incorporation 項僅連到通用 EDGAR 搜尋。
+- **修正**：
+  1. **Tier badge UX**：`ItemRecord.segment_method` 自 `SegmentResult` 傳播；UI 顯示
+     Tier0 method badge + "contract passed"，取代 95% progress bar；low_confidence 才顯示數值
+  2. **可讀性**：`_format_sec_text` 將行分組為 `<p>` 段落；serif 排版 CSS（`.sec-reader`）
+     含 max-width 與 justified text
+  3. **Agent 並發防護**：running/queued 時禁用提交 + 雙重檢查
+  4. **DEF 14A 自動連結**：`find_proxy_filing(cik)` 經 SEC submissions API；
+     incorporation 項顯示最新 proxy accession 直連
+  5. 擴充 README Known Limitations：ephemeral SQLite、iframe/shadow DOM、gold circularity
+- **驗證**：e2e smoke 新增 segment_method + PDF 偵測檢查。
 
-### `agent_extract_path` (2026-05-28)
-- **Failed path**: Extract/summarize tasks forced through multi-step action loop → plan_failed or hallucinated `done`.
-- **Resolution** (L2-inspired, generic):
-  1. `infer_task_mode()` routes extract vs act from task verbs
-  2. Extract path: navigate → one `PageExtraction` LLM call → `verify_task_outcome`
-  3. Planner context: head+tail page snippet (4k), a11y 8k; no-clarify prompt
-- **Validation**: unit tests + e2e task-mode smoke.
+### `agent_verify_fix`（2026-05-28）
 
-### `ddg_heldout` (2026-05-28)
-- **Failed path**: `duckduckgo_search` consistently hit `max_steps` in train eval (83% KPI) despite Wiki search passing — redundant + flaky (consent/SERP), fixing would overfit.
-- **Resolution**: Move task to `split: heldout`; keep UI preset labeled experimental; train search KPI = Wikipedia only.
-- **Validation**: train eval **5/5** agent tasks.
+- **失敗路徑**：Step 0 verify 在 landing page 使用任務引號詞 → Wiki/DDG 卡在 recovery；
+  `task_complete` 信任 LLM `result` 而未與頁面交叉驗證。
+- **修正**（通用 — 無 site hardcoding）：
+  1. 中間步驟跳過 task keywords；step 0 僅用 navigation-only verify
+  2. `done=true` 時 `verify_task_outcome()`：引號詞 + extracted result 須在 page/JSON
+  3. `infer_max_steps()` 依任務動詞（search/form 15、extract 12、default 10）
+  4. EDGAR 搜尋：ticker → company_tickers.json → submissions，再 EFTS fallback
+- **驗證**：`tests/unit/test_agent_verify.py`。
 
-### `sec_search_ux` (2026-05-28)
-- **Failed path**: Query `google` returned EFTS hits with empty `() — accession` labels (no entity_name); users could pick wrong filing.
-- **Resolution**: `normalize_search_hit` enriches CIK from accession + submissions API; drop unidentified hits; UI hints for ticker vs keyword; confirm line before use.
-- **Validation**: `tests/unit/test_edgar_client.py`.
+### `agent_search_harness`（2026-05-28）
 
-### `eval_dashboard_ux` (2026-05-28)
-- **Failed path**: Eval page mixed SEC/Agent wide CSV; only preset train tasks; no distinction from live user runs.
-- **Resolution**: Three tabs — Benchmark train cards, Known limitations, Live agent runs from SQLite; load persisted `eval_summary.json` on open; CSV in download expander.
-- **Validation**: `tests/unit/test_sqlite_wal_concurrency.py::test_list_recent_runs_includes_cost_and_steps`.
+- **失敗路徑**：Wiki/DDG search 觸及 max_steps；httpbin flaky；UI 顯示未使用的 OpenRouter；
+  Gemini 503 → 立即 `plan_failed`；summarize 任務超出範圍。
+- **修正**（通用）：
+  1. Step 0 用 `verify_navigation`；search/find 任務 type 後自動按 Enter
+  2. landing 通用 consent-banner dismiss（Accept/Agree 按鈕標籤）
+  3. Gemini primary infra retry（3× backoff）後才 fallback
+  4. UI：Gemini-only 環境檢查；文件記載 summarize 限制
+- **驗證**：agent eval train **5/6**（Wiki OK，DDG flaky）；更新 `docs/analysis.md`。
 
-### `content_quality_toc_stub` (2026-05-29)
+### `agent_extract_path`（2026-05-28）
 
-- **Failed path**: Citi Item 7A was marked `extracted` with ~98 chars of bare page-range TOC index text; train required-item recall looked 100% but semantically wrong. INTC cross-reference rows (`Pages 3–4`) were at risk of being misclassified as stubs.
-- **Resolution**:
-  1. Added `task2_sec/pipeline/content_quality.py`: `is_likely_toc_stub()` (bare page ranges) vs `is_cross_reference_index()` (`Pages N` cross-ref rows).
-  2. `eval_runner.py`: `toc_stub_count`, `required_quality_failures`, failure category `toc_stub_required_item`; required items must pass content-quality, not just exist.
-  3. Citi Item 7A re-anchored via alternate section title (`Market Risk\nOverview`) → ~146k chars real prose.
-- **Validation**: Train MSFT/INTC/C required items still pass; `pytest -m unit` green; spot-check in `docs/eval_spot_checks.md`.
+- **失敗路徑**：Extract/summarize 任務被強制走多步 action 迴圈 → plan_failed 或幻覺 `done`。
+- **修正**（L2 啟發、通用）：
+  1. `infer_task_mode()` 依任務動詞路由 extract vs act
+  2. Extract path：navigate → 一次 `PageExtraction` LLM 呼叫 → `verify_task_outcome`
+  3. Planner context：head+tail page snippet（4k）、a11y 8k；no-clarify prompt
+- **驗證**：unit tests + e2e task-mode smoke。
 
-### `citi_mega_html_perf` (2026-05-29)
+### `ddg_heldout`（2026-05-28）
 
-- **Failed path**: Citi ~17 MB HTML filing took ~25s for Tier0 extraction — TOC parsing scanned the full document and repeated `soup.find(id=...)` lookups.
-- **Resolution** in `task2_sec/pipeline/segment.py`:
-  1. TOC scan limited to first ~900 KB for mega filings.
-  2. Pre-built `id_index` map; single pass for `starts_by_id`; cached `toc_zones` and section-name hits.
-  3. Precompiled `_SECTION_NAME_PATTERNS`.
-- **Validation**: Citi single-filing extract ~4–6s locally; train eval unchanged (`test_sec_manifest_train_split`).
+- **失敗路徑**：`duckduckgo_search` 在 train eval 恆觸 max_steps（KPI 83%），
+  儘管 Wiki search 通過 — 冗餘且 flaky（consent/SERP），修復會 overfit。
+- **修正**：任務移至 `split: heldout`；UI preset 標 experimental；train search KPI 僅 Wikipedia。
+- **驗證**：train eval agent **5/5**。
 
-### `heldout_eval_expansion` (2026-05-29)
+### `sec_search_ux`（2026-05-28）
 
-- **Failed path**: Only BRK.B held-out — insufficient variant coverage for honest generalization claims (pre-iXBRL, second bank TOC, REIT, mining, 10-K/A).
-- **Resolution**:
-  1. Expanded `task2_sec/eval/manifest.json` to 11 entries (3 train + 8 held-out optional when cached).
-  2. Added `scripts/cache_heldout_filings.py`, `scripts/run_heldout_baseline.py` (`--with-llm` optional).
-  3. Manual spot-checks: `docs/eval_spot_checks.md`; variant matrix in `docs/analysis.md`.
-- **Validation**: `reports/heldout_baseline.json` — **5/8** `failure_category=ok`, **5/8** strict required pass (no toc_stub on required items). Train split untouched.
+- **失敗路徑**：查詢 `google` 回傳 EFTS hits 但 `() — accession` 標籤為空（無 entity_name）；
+  使用者可能選錯 filing。
+- **修正**：`normalize_search_hit` 從 accession + submissions API 補 CIK；丟棄無法識別 hits；
+  UI 提示 ticker vs keyword；使用前確認行。
+- **驗證**：`tests/unit/test_edgar_client.py`。
 
-### `jpm_toc_stub_gap` (2026-05-29)
+### `eval_dashboard_ux`（2026-05-28）
 
-- **Failed path**: JPM (second large-bank TOC) held-out **2/4** required items — `toc_stub_required_item`. Citi heuristics partially generalize but not fully.
-- **Resolution**: Documented as known gap in README + `docs/analysis.md`; **not** ticker-specific prompt tuning (would overfit). Next step: generic bank-TOC zone detection, not JPM-only rules.
-- **Validation**: `heldout_baseline.json` records failure honestly; train KPI unchanged.
+- **失敗路徑**：Eval 頁混雜 SEC/Agent 寬 CSV；僅 preset train 任務；與 live user runs 未區分。
+- **修正**：三分頁 — 基準 Train 卡片、已知限制、SQLite 即時 agent runs；
+  開頁載入 persisted `eval_summary.json`；CSV 在下載 expander。
+- **驗證**：`tests/unit/test_sqlite_wal_concurrency.py::test_list_recent_runs_includes_cost_and_steps`。
 
-### `aapl_pre_ixbrl_gap` (2026-05-29)
+### `content_quality_toc_stub`（2026-05-29）
 
-- **Failed path**: AAPL FY2010 pre-iXBRL HTML held-out **2/4** — `missing_item_header` (legacy `<font>`/table layouts without standard Item headers).
-- **Resolution**: Listed under eval limitations; Tier0 path expected to miss without format-specific pre-processing.
-- **Validation**: Documented in variant matrix; no train manifest change.
+- **失敗路徑**：Citi Item 7A 標為 `extracted` 但僅 ~98 chars 裸頁碼 TOC 索引文字；
+  train required-item recall 看似 100% 語意卻錯。INTC cross-reference 列（`Pages 3–4`）
+  有誤判為 stub 風險。
+- **修正**：
+  1. 新增 `task2_sec/pipeline/content_quality.py`：`is_likely_toc_stub()`（裸頁碼範圍）
+     vs `is_cross_reference_index()`（`Pages N` cross-ref 列）
+  2. `eval_runner.py`：`toc_stub_count`、`required_quality_failures`、
+     failure category `toc_stub_required_item`；required items 須通過 content-quality，非僅存在
+  3. Citi Item 7A 經 alternate section title（`Market Risk\nOverview`）重新錨定 → ~146k chars 真實正文
+- **驗證**：Train MSFT/INTC/C required items 仍通過；`pytest -m unit` 綠；
+  spot-check 見 `docs/eval_spot_checks.md`。
 
-### `kscp_amendment_gap` (2026-05-29)
+### `citi_mega_html_perf`（2026-05-29）
 
-- **Failed path**: KSCP 10-K/A amendment held-out **0/4** — Part III-only amendment lacks full Item 1–16 body.
-- **Resolution**: Honest `missing_item_header` outcome; UI/eval treat as expected edge case, not silent success.
-- **Validation**: `heldout_baseline.json`; spot-check notes in `docs/eval_spot_checks.md`.
+- **失敗路徑**：Citi ~17 MB HTML filing Tier0 抽取 ~25s — TOC 解析掃描全文件並重複 `soup.find(id=...)`。
+- **修正**（`task2_sec/pipeline/segment.py`）：
+  1. mega filing 的 TOC scan 限前 ~900 KB
+  2. 預建 `id_index` map；`starts_by_id` 單遍；cache `toc_zones` 與 section-name hits
+  3. 預編譯 `_SECTION_NAME_PATTERNS`
+- **驗證**：Citi 單檔抽取本地 ~4–6s；train eval 不變（`test_sec_manifest_train_split`）。
 
-### `segment_classify_p2` (2026-05-29)
+### `heldout_eval_expansion`（2026-05-29）
 
-- **Failed path**: Short ambiguous excerpts (150–300 chars) stayed `UNKNOWN` in Tier0 heuristic classifier — no structured label for UI quality badges.
-- **Resolution**:
-  1. `task2_sec/pipeline/segment_classify.py`: `SegmentClass` enum + optional Tier1 via `ENABLE_SEC_LLM_CLASSIFY`.
-  2. Prompt versioned as `prompts/v1_sec_segment_classify.txt` (loaded via `prompt_loader`).
-  3. Train KPI path remains Tier0-only; LLM classify opt-in for UI / `--with-llm` eval.
-- **Validation**: `test_prompt_loader_sec_segment_classify_template`; train eval $0/filing unchanged.
+- **失敗路徑**：僅 BRK.B held-out — 變異覆蓋不足，無法誠實宣稱泛化
+  （pre-iXBRL、第二銀行 TOC、REIT、mining、10-K/A）。
+- **修正**：
+  1. 擴充 `task2_sec/eval/manifest.json` 至 11 entries（3 train + 8 held-out，有 cache 時可選執行）
+  2. 新增 `scripts/cache_heldout_filings.py`、`scripts/run_heldout_baseline.py`（`--with-llm` 可選）
+  3. 手動 spot-check：`docs/eval_spot_checks.md`；variant matrix 見 `docs/analysis.md`
+- **驗證**：`reports/heldout_baseline.json` — **5/8** `failure_category=ok`，
+  **5/8** strict required pass（required items 無 toc_stub）。Train split 未動。
 
-### `sec_eval_ui_presentation` (2026-05-29)
+### `jpm_toc_stub_gap`（2026-05-29）
 
-- **Failed path**: Manifest expanded to 11 filings but SEC UI only showed 3 train entries — reviewers on Zeabur could not discover held-out eval depth or honest failure cases without reading README.
-- **Resolution**:
-  1. SEC 10-K page: three tabs — **基準集（Train · 3）** / **泛化驗證（Held-out · 8）** / **自訂報表**; held-out rows show baseline outcome badges from `heldout_baseline.json`.
-  2. Eval page: new **Held-out 基線** tab with summary metrics + filing table.
-  3. `shared_harness/sec_ui.py`: `heldout_outcome_badge()` for testable badge labels.
-  4. README Reviewer Quick Start, SUBMISSION smoke checklist, Home copy updated.
-- **Validation**: `tests/unit/test_sec_ui.py` (heldout tab context + badges); train tab still filters `split=train` only.
+- **失敗路徑**：JPM（第二大型銀行 TOC）held-out required **2/4** — `toc_stub_required_item`。
+  Citi 啟發式部分泛化但未完全。
+- **修正**：在 README + `docs/analysis.md` 記為 known gap；**未**做 ticker-specific prompt 調參（會 overfit）。
+  下一步：通用 bank-TOC zone 偵測，非 JPM-only 規則。
+- **驗證**：`heldout_baseline.json` 誠實記錄失敗；train KPI 不變。
 
-### `plan_reposition` (2026-05-29)
+### `aapl_pre_ixbrl_gap`（2026-05-29）
 
-- **Failed path**: `PLAN.md` still referenced Day 1–7 / open Phase gates after many iterations; `.cursorrules` forced agents to read stale plan; README treated PLAN and ITERATION as equal iteration sources.
-- **Resolution**:
-  1. Rewrote `PLAN.md` as **Architecture & Invariants** + Shipped tracks; moved Phase 0–3 to Historical appendix.
-  2. `.cursorrules`: read PLAN (invariants) + skim ITERATION (latest entries).
-  3. README: ITERATION primary for iteration narrative; PLAN = invariants summary.
-- **Validation**: No code change; doc cross-links consistent with test brief (Git + prompts/ + README + analysis).
+- **失敗路徑**：AAPL FY2010 pre-iXBRL HTML held-out **2/4** — `missing_item_header`
+  （legacy `<font>`/table 版面無標準 Item header）。
+- **修正**：列於 eval limitations；Tier0 路徑預期在無 format-specific 前處理下會 miss。
+- **驗證**：記載於 variant matrix；train manifest 未改。
 
-### `cross_ref_bidirectional_upgrade` (2026-05-29)
+### `kscp_amendment_gap`（2026-05-29）
 
-- **Failed path**: INTC cross-reference index rows (`Pages N` at EOF) stayed as UI cross-ref stubs; Citi-sized filings hung in UI because `use_arbiter=True` by default; section_name picked first `Risk Factors` TOC row (Citi 1A → 25-char stub).
-- **Resolution** (generic — no ticker/accession branches):
-  1. `_best_section_name_by_id` + `_is_topic_page_index_block` (bare page lines, title+range second line).
-  2. Bidirectional `_upgrade_short_segments` / `_scrub_toc_stub_segments` for `Pages N` cross-ref stubs.
-  3. Section patterns `(?:^|\n)` for normalize bodies; pick best prose anchor among all matches.
-  4. SEC UI: arbiter **opt-in** (default off, matches eval Tier0); `st.status` step labels; custom tab `force_refresh=True`.
-  5. Regenerated train gold (`scripts/regenerate_gold.py`).
-- **Validation**: `test_upgrade_cross_ref_stub_at_document_end_to_earlier_section_name`, `test_topic_page_index_block_detects_bare_page_number_lists`; INTC 1A/7/8 → 100k+ char prose (Item 1 remains cross-ref — no in-body Item 1 header in that filing format); `pytest -m unit` 123 green; train eval + Citi 1A/7/8 ok.
+- **失敗路徑**：KSCP 10-K/A amendment held-out **0/4** — Part III-only amendment 缺完整 Item 1–16 正文。
+- **修正**：誠實 `missing_item_header` 結果；UI/eval 視為預期 edge case，非 silent success。
+- **驗證**：`heldout_baseline.json`；spot-check 見 `docs/eval_spot_checks.md`。
 
-### `bank_mega_toc_index_scrub` (2026-05-29)
+### `segment_classify_p2`（2026-05-29）
 
-- **Failed path**: Citi front mega-TOC (numbered rows + bare page ranges, no `Item` prefix) produced **fake extracted** rows for Items 1/4/9 and blocked **9A/9B** (real body uses `DISCLOSURE CONTROLS AND PROCEDURES` / `OTHER INFORMATION` headings). `_find_toc_zones` missed this format; supplement re-added index stubs via 600-char anchor preview.
-- **Resolution** (generic — no ticker branches):
-  1. `_find_front_index_zone` + split scrub vs section_name zones (`_scrub_toc_zones` vs tight `content_start`).
-  2. `_scrub_index_stub_segments` + supplement rewrite: drop front index stubs; keep EOF cross-ref + incorporation index rows.
-  3. Section patterns: `Disclosure Controls and Procedures` → 9A, `Market for Registrant…` → 5, `Other Information` → 9B; 220-char anchor preview for index detection.
-  4. `_dedupe_segments_by_item`, `_is_incorporation_index_stub` for Part III `*` footnotes.
-  5. `item_heuristics.py`: `not_applicable`, note cross-ref warnings in `validate.py`.
-- **Validation**: Citi **9A (~6k) / 9B (~53k)** extracted; required **1A/7/8** unchanged; Items 10–14 incorporated; front stubs → honest `missing`; `149` pytest green; gold regenerated.
+- **失敗路徑**：短 ambiguous 摘錄（150–300 chars）在 Tier0 啟發式分類器維持 `UNKNOWN` —
+  UI quality badge 無結構化標籤。
+- **修正**：
+  1. `task2_sec/pipeline/segment_classify.py`：`SegmentClass` enum + 可選 Tier1（`ENABLE_SEC_LLM_CLASSIFY`）
+  2. Prompt 版本化為 `prompts/v1_sec_segment_classify.txt`（經 `prompt_loader` 載入）
+  3. Train KPI 路徑仍 Tier0-only；LLM classify 為 UI / `--with-llm` eval 可選
+- **驗證**：`test_prompt_loader_sec_segment_classify_template`；train eval $0/filing 不變。
 
-### `kpi_alignment_and_jpm_header_quality` (2026-05-29)
+### `sec_eval_ui_presentation`（2026-05-29）
 
-- **Failed path**: INTC Item 1 cross-ref counted as required pass while Citi Item 1 honest missing — asymmetric KPI. JPM held-out 2/4: `_pick_best_start` returned first front index header (`outside[0]`) instead of prose header at 6796/47340.
-- **Resolution** (generic):
-  1. Manifest: INTC + Citi `required_items = [1A,7,8]` with `notes`; Citi `expected_missing` for honest gaps.
-  2. `_header_start_quality_key` + min-quality `_pick_best_start` (fixes JPM 1/1A without ticker branches).
-  3. Section titles allow trailing period (`Business.?`, `Risk Factors.?`).
-  4. `_supplement_note_cross_ref_items` for Item 3 note pointers.
-  5. Eval CSV: `required_prose_count`, `required_cross_ref_count`, `expected_missing_ok_count`.
-- **Validation**: Train 3/3 + 3/3 + 4/4 MSFT; JPM held-out **4/4**; Citi Item 3 note cross-ref extracted; held-out **6/8** ok; **151** pytest green; gold regenerated.
+- **失敗路徑**：Manifest 擴至 11 filings 但 SEC UI 僅顯示 3 train — Zeabur reviewer
+  不讀 README 無法發現 held-out eval 深度與誠實失敗案例。
+- **修正**：
+  1. SEC 10-K 頁三分頁 — **基準集（Train · 3）** / **泛化驗證（Held-out · 8）** / **自訂報表**；
+     held-out 列顯示 `heldout_baseline.json` 基線 outcome badge
+  2. Eval 頁新增 **Held-out 基線** 分頁，含 summary metrics + filing 表
+  3. `shared_harness/sec_ui.py`：`heldout_outcome_badge()` 可測 badge 標籤
+  4. 更新 README Reviewer Quick Start、SUBMISSION smoke checklist、Home 文案
+- **驗證**：`tests/unit/test_sec_ui.py`（heldout tab context + badges）；train tab 仍僅 `split=train`。
 
-### `agent_heldout_baseline_and_recovery` (2026-05-29)
+### `plan_reposition`（2026-05-29）
 
-- **Goal**: Agent eval discipline parity with SEC — held-out JSON, honest gaps, substantive recovery (not sleep stubs).
-- **P0**: `scripts/run_agent_heldout_baseline.py` → `reports/agent_heldout_baseline.json`; Eval UI section.
-- **P1**: Action-step recovery (`MAX_RECOVERY_PER_ACTION=1`); `_do_recovery` implements scroll/role_name/networkidle; integration test.
-- **P2**: `success_hints` in `tasks.yaml` + `verify_task_outcome` task-type checks; `task_meta` threaded through `run()`.
-- **P3**: Frozen held-out `python_docs_heldout` (do not tune prompt for it).
-- **P4**: SEC UI **Required KPI** banner on extract (`sec_ui.compute_required_kpi`); README/SUBMISSION/analysis updated.
-- **Validation**: Agent held-out **2/4** ok (SEC EDGAR + python docs); DDG/forms honest fail; train 5/5 unchanged; pytest green.
+- **失敗路徑**：多輪迭代後 `PLAN.md` 仍引用 Day 1–7 / 開放 Phase gates；
+  `.cursorrules` 強制 agent 讀過期 plan；README 將 PLAN 與 ITERATION 視為同等迭代來源。
+- **修正**：
+  1. 重寫 `PLAN.md` 為 **Architecture & Invariants（架構與不變式）** + Shipped tracks；
+     Phase 0–3 移至 Historical appendix
+  2. `.cursorrules`：讀 PLAN（invariants）+ 略讀 ITERATION（最新 entries）
+  3. README：ITERATION 為迭代敘事主讀；PLAN = invariants 摘要
+- **驗證**：無程式變更；文件交叉連結與 test brief 一致（Git + prompts/ + README + analysis）。
+
+### `cross_ref_bidirectional_upgrade`（2026-05-29）
+
+- **失敗路徑**：INTC cross-reference index 列（EOF 的 `Pages N`）在 UI 仍為 cross-ref stub；
+  Citi 級 filing 因預設 `use_arbiter=True` UI 卡住；section_name 選到第一個 `Risk Factors` TOC 列
+  （Citi 1A → 25-char stub）。
+- **修正**（通用 — 無 ticker/accession 分支）：
+  1. `_best_section_name_by_id` + `_is_topic_page_index_block`（裸頁碼列、title+range 第二行）
+  2. 雙向 `_upgrade_short_segments` / `_scrub_toc_stub_segments` 處理 `Pages N` cross-ref stub
+  3. Section patterns `(?:^|\n)` 用於 normalize body；在所有匹配中選最佳 prose anchor
+  4. SEC UI：arbiter **opt-in**（預設關，對齊 eval Tier0）；`st.status` 步驟標籤；custom tab `force_refresh=True`
+  5. 重新產生 train gold（`scripts/regenerate_gold.py`）
+- **驗證**：`test_upgrade_cross_ref_stub_at_document_end_to_earlier_section_name`、
+  `test_topic_page_index_block_detects_bare_page_number_lists`；INTC 1A/7/8 → 100k+ char prose
+  （Item 1 仍 cross-ref — 該 filing 格式無 in-body Item 1 header）；`pytest -m unit` 123 綠；
+  train eval + Citi 1A/7/8 ok。
+
+### `bank_mega_toc_index_scrub`（2026-05-29）
+
+- **失敗路徑**：Citi front mega-TOC（編號列 + 裸頁碼範圍、無 `Item` 前綴）產生 Items 1/4/9
+  **假 extracted**，並阻擋 **9A/9B**（真實正文用 `DISCLOSURE CONTROLS AND PROCEDURES` /
+  `OTHER INFORMATION` 標題）。`_find_toc_zones` 漏此格式；supplement 經 600-char anchor preview 重加 index stub。
+- **修正**（通用 — 無 ticker 分支）：
+  1. `_find_front_index_zone` + 分離 scrub vs section_name zones（`_scrub_toc_zones` vs 緊 `content_start`）
+  2. `_scrub_index_stub_segments` + supplement 重寫：丟 front index stub；保留 EOF cross-ref + incorporation index 列
+  3. Section patterns：`Disclosure Controls and Procedures` → 9A、`Market for Registrant…` → 5、
+     `Other Information` → 9B；220-char anchor preview 做 index 偵測
+  4. `_dedupe_segments_by_item`、`_is_incorporation_index_stub` 處理 Part III `*` 腳註
+  5. `item_heuristics.py`：`not_applicable`；`validate.py` 中 note cross-ref warnings
+- **驗證**：Citi **9A (~6k) / 9B (~53k)** extracted；required **1A/7/8** 不變；
+  Items 10–14 incorporated；front stub → 誠實 `missing`；149 pytest 綠；gold 重新產生。
+
+### `kpi_alignment_and_jpm_header_quality`（2026-05-29）
+
+- **失敗路徑**：INTC Item 1 cross-ref 計入 required pass，Citi Item 1 誠實 missing — KPI 不對稱。
+  JPM held-out 2/4：`_pick_best_start` 回傳第一個 front index header（`outside[0]`）
+  而非 6796/47340 的 prose header。
+- **修正**（通用）：
+  1. Manifest：INTC + Citi `required_items = [1A,7,8]` 含 `notes`；Citi `expected_missing` 記錄誠實 gap
+  2. `_header_start_quality_key` + min-quality `_pick_best_start`（修 JPM 1/1A，無 ticker 分支）
+  3. Section titles 允許尾句點（`Business.?`、`Risk Factors.?`）
+  4. `_supplement_note_cross_ref_items` 處理 Item 3 note pointer
+  5. Eval CSV：`required_prose_count`、`required_cross_ref_count`、`expected_missing_ok_count`
+- **驗證**：Train 3/3 + 3/3 + MSFT 4/4；JPM held-out **4/4**；Citi Item 3 note cross-ref extracted；
+  held-out **6/8** ok；**151** pytest 綠；gold 重新產生。
+
+### `agent_heldout_baseline_and_recovery`（2026-05-29）
+
+- **目標**：Agent eval 紀律與 SEC 對齊 — held-out JSON、誠實 gap、實質 recovery（非 sleep stub）。
+- **P0**：`scripts/run_agent_heldout_baseline.py` → `reports/agent_heldout_baseline.json`；Eval UI 區塊。
+- **P1**：Action-step recovery（`MAX_RECOVERY_PER_ACTION=1`）；`_do_recovery` 實作 scroll/role_name/networkidle；integration test。
+- **P2**：`tasks.yaml` 中 `success_hints` + `verify_task_outcome` task-type 檢查；`task_meta` 貫穿 `run()`。
+- **P3**：Frozen held-out `python_docs_heldout`（勿為此任務調 prompt）。
+- **P4**：SEC UI 抽取後 **Required KPI** banner（`sec_ui.compute_required_kpi`）；更新 README/SUBMISSION/analysis。
+- **驗證**：Agent held-out **2/4** ok（SEC EDGAR + python docs）；DDG/forms 誠實 fail；train 5/5 不變；pytest 綠。
