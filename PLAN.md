@@ -38,6 +38,7 @@ RUN_BUDGET_USD=20
 - **Eval expansion**: 11-filing manifest; `heldout_baseline.json` (5/8 ok); honest JPM / AAPL / KSCP gaps
 - **Prompts audit**: `prompts/README.md`, ITERATION entries, arbiter SOP sync
 - **UI presentation**: SEC Train / Held-out / Custom tabs; Eval held-out baseline tab
+- **Harness hardening (Phase 1)**: per-task Playwright context reset; `llm_budget_guard`; `litellm.completion_cost`; `SQLITE_JOURNAL_MODE`
 
 Details and test evidence for each: [`prompts/ITERATION.md`](prompts/ITERATION.md).
 

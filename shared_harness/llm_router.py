@@ -11,7 +11,7 @@ import litellm
 from pydantic import BaseModel, ValidationError
 
 from shared_harness import llm_config
-from shared_harness.cost_tracker import BudgetExceededError, check_budget, record_cost
+from shared_harness.cost_tracker import BudgetExceededError, check_budget, llm_budget_guard, record_cost
 from shared_harness.llm_parse import parse_model
 
 logger = logging.getLogger(__name__)
@@ -61,6 +61,16 @@ def _estimate_usd(model: str, tokens_in: int, tokens_out: int) -> float:
     return (tokens_in + tokens_out) * 0.000001
 
 
+def _completion_usd(model: str, response: Any, tokens_in: int, tokens_out: int) -> float:
+    try:
+        cost = litellm.completion_cost(completion_response=response, model=model)
+        if cost is not None and float(cost) >= 0:
+            return float(cost)
+    except Exception:
+        logger.debug("litellm.completion_cost unavailable for %s; using token estimate", model)
+    return _estimate_usd(model, tokens_in, tokens_out)
+
+
 def _invoke(
     model: str,
     messages: list[dict[str, str]],
@@ -68,7 +78,7 @@ def _invoke(
     max_tokens: int,
     *,
     force_json: bool = False,
-) -> tuple[str, int, int]:
+) -> tuple[str, int, int, Any]:
     cfg = llm_config.resolve_tier(tier)
     extra = _completion_kwargs(cfg, tier)
     if force_json:
@@ -88,7 +98,7 @@ def _invoke(
     usage = getattr(response, "usage", None)
     tokens_in = int(getattr(usage, "prompt_tokens", 0) or 0)
     tokens_out = int(getattr(usage, "completion_tokens", 0) or 0)
-    return content, tokens_in, tokens_out
+    return content, tokens_in, tokens_out, response
 
 
 def _attempt(
@@ -104,20 +114,19 @@ def _attempt(
     schema: type[BaseModel] | None,
     force_json: bool = False,
 ) -> str | BaseModel:
-    check_budget(run_id, task_type=task_type, before_call=True)
-    raw, tin, tout = _invoke(model, messages, tier, max_tokens, force_json=force_json)
-    record_cost(
-        run_id=run_id,
-        tier=tier,
-        provider=_provider_from_model(model),
-        model=model,
-        call_site=call_site,
-        attempt=attempt,
-        tokens_in=tin,
-        tokens_out=tout,
-        usd=_estimate_usd(model, tin, tout),
-    )
-    check_budget(run_id, task_type=task_type)
+    with llm_budget_guard(run_id, task_type=task_type):
+        raw, tin, tout, response = _invoke(model, messages, tier, max_tokens, force_json=force_json)
+        record_cost(
+            run_id=run_id,
+            tier=tier,
+            provider=_provider_from_model(model),
+            model=model,
+            call_site=call_site,
+            attempt=attempt,
+            tokens_in=tin,
+            tokens_out=tout,
+            usd=_completion_usd(model, response, tin, tout),
+        )
     if schema is None:
         return raw
     return parse_model(raw, schema)

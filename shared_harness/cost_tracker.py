@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 import os
+import threading
+from contextlib import contextmanager
 from dataclasses import dataclass
+from typing import Iterator
 
 from shared_harness.job_store import get_connection
+
+_budget_lock = threading.RLock()
 
 
 class BudgetExceededError(Exception):
@@ -123,3 +128,16 @@ def check_budget(
             max_calls = limits.max_llm_calls_agent if task_type == "agent" else limits.max_llm_calls_filing
             if get_run_llm_call_count(run_id) >= max_calls:
                 raise BudgetExceededError(f"Max LLM calls exceeded: {max_calls}")
+
+
+@contextmanager
+def llm_budget_guard(
+    run_id: str | None,
+    *,
+    task_type: str = "agent",
+) -> Iterator[None]:
+    """Serialize budget check → LLM call → cost record to prevent race overspend."""
+    with _budget_lock:
+        check_budget(run_id, task_type=task_type, before_call=True)
+        yield
+        check_budget(run_id, task_type=task_type)

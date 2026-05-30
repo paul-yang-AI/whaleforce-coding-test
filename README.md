@@ -154,8 +154,8 @@ whaleforce-coding-test/
 | `llm_router.py` | litellm 封裝：Tier1/2 主用 + 一次性 fallback、預算檢查、成本紀錄、schema 解析 |
 | `llm_config.py` | Tier → 模型 ID 對應（可用環境變數覆寫） |
 | `llm_parse.py` | 跨廠商 JSON 正規化（剝掉 ```` ```json ```` 圍欄後解析成 Pydantic） |
-| `cost_tracker.py` | 執行緒安全成本統計 + 熔斷器（全域 $20 / 每代理執行 $0.50 / 每份財報 $0.30 + 呼叫次數上限） |
-| `job_store.py` | SQLite（WAL 模式）：紀錄 runs / steps / cost events，預設 `data/whaleforce.db` |
+| `cost_tracker.py` | 執行緒安全成本統計 + 熔斷器；`llm_budget_guard()` 序列化 check/record |
+| `job_store.py` | SQLite（預設 WAL，可 `SQLITE_JOURNAL_MODE=TRUNCATE`）：runs / steps / cost events |
 | `edgar_client.py` | SEC 唯一 HTTP 入口：抓取、搜尋、CIK 解析、限速、HTML 快取 |
 | `prompt_loader.py` | 載入 `prompts/sops/{name}.md` 或 `prompts/v1_{name}.txt` |
 | `eval_runner.py` | 跑 SEC manifest + 代理任務，評分，匯出 CSV，彙總 KPI |
@@ -192,7 +192,7 @@ whaleforce-coding-test/
 
 `click`（點擊）、`type`（輸入，搜尋任務會自動按 Enter 送出）、`scroll`（捲動）、`press_key`（按鍵）、`navigate`（導覽）、`none`（無操作/結束）。
 
-執行器（`browser.py`）基於同步 Playwright + 無頭 Chromium；會在導覽前拒絕 PDF / 下載類 URL，並嘗試關閉常見的 cookie 同意橫幅。
+執行器（`browser.py`）基於同步 Playwright + 無頭 Chromium；`reset_context()` 在 eval 每 task 間隔離 cookie/storage；會在導覽前拒絕 PDF / 下載型 URL，並嘗試關閉常見的 cookie 同意橫幅。
 
 ### 恢復策略：按「失敗類型」對症下藥
 

@@ -25,11 +25,16 @@ def _default_db_path() -> Path:
 
 
 def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
+    import os
+
     path = db_path or _default_db_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(path), check_same_thread=False, timeout=5.0)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
+    journal = os.environ.get("SQLITE_JOURNAL_MODE", "WAL").strip().upper()
+    if journal not in {"WAL", "DELETE", "TRUNCATE", "MEMORY", "OFF"}:
+        journal = "WAL"
+    conn.execute(f"PRAGMA journal_mode={journal}")
     conn.execute("PRAGMA busy_timeout=5000")
     _ensure_schema(conn)
     return conn

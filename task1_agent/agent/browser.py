@@ -68,6 +68,11 @@ def _try_dismiss_consent_banner(page: Page) -> None:
 
 _LAUNCH_ARGS = ["--disable-dev-shm-usage", "--no-sandbox"]
 _DEFAULT_TIMEOUT = 20000
+_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/120.0.0.0 Safari/537.36"
+)
 
 
 class PlaywrightExecutor:
@@ -88,17 +93,34 @@ class PlaywrightExecutor:
             args=_LAUNCH_ARGS,
             headless=self._headless,
         )
-        self._context = self._browser.new_context(
-            user_agent=(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
-            ),
-        )
+        self._open_context()
+
+    def _open_context(self) -> None:
+        if self._browser is None:
+            raise RuntimeError("Executor not started")
+        self._context = self._browser.new_context(user_agent=_USER_AGENT)
         self._page = self._context.new_page()
         self._page.set_default_timeout(self._timeout_ms)
 
+    def reset_context(self) -> None:
+        """Fresh BrowserContext + Page (isolates cookies/storage between eval tasks)."""
+        if self._browser is None:
+            raise RuntimeError("Executor not started")
+        try:
+            if self._context:
+                self._context.close()
+        except Exception:
+            pass
+        self._context = None
+        self._page = None
+        self._open_context()
+
     def close(self) -> None:
+        try:
+            if self._context:
+                self._context.close()
+        except Exception:
+            pass
         try:
             if self._browser:
                 self._browser.close()

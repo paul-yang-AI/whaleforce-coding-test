@@ -67,6 +67,7 @@ Include:
 | `RUN_BUDGET_USD` | No | `20` |
 | `ENABLE_BLIND_CRITIC` | No | `false` (default); `true` for stricter agent terminal gate |
 | `LLM_FALLBACK_ENABLED` | No | `true` (default) |
+| `SQLITE_JOURNAL_MODE` | No | `WAL` (default); use `TRUNCATE` on NFS / multi-instance if needed |
 
 Port: **8501** (Networking must map to container 8501).
 

@@ -414,3 +414,25 @@
 - **P3**：Frozen held-out `python_docs_heldout`（勿為此任務調 prompt）。
 - **P4**：SEC UI 抽取後 **Required KPI** banner（`sec_ui.compute_required_kpi`）；更新 README/SUBMISSION/analysis。
 - **驗證**：Agent held-out **2/4** ok（SEC EDGAR + python docs）；DDG/forms 誠實 fail；train 5/5 不變；pytest 綠。
+
+### `harness_hardening_phase1`（2026-05-29）
+
+- **失敗路徑**（全局分析 / harness audit）：
+  1. `run_agent_eval()` 共用單一 `BrowserContext`/`Page` — cookie/DOM 在 task 間污染
+  2. `check_budget()` 與 `record_cost()` 分離 — 高並發下可能 race overspend
+  3. `llm_router._estimate_usd()` 固定 `(tokens)*1e-6` — 熔斷精度不足
+  4. `job_store` 強制 WAL — NFS/多實例環境可能不適用
+- **修正**：
+  1. `PlaywrightExecutor.reset_context()` + `run_agent_eval()` 每 task 重置（Browser 可復用）
+  2. `cost_tracker.llm_budget_guard()`（`RLock`）包裹 check → invoke → record
+  3. `litellm.completion_cost()` 優先，失敗時 fallback token 估算
+  4. `SQLITE_JOURNAL_MODE` 環境變數（預設 WAL；可設 TRUNCATE）
+- **驗證**：`test_agent_eval_context`、`test_llm_router_cost`、`test_budget_guard`；
+  unit **152** + integration **13** 綠；`run_private_regression.py` SEC 3/3 + held-out 6/8 / agent 2/4 不變。
+
+### `agent_heldout_ui_form_sync`（2026-05-29）
+
+- **失敗路徑**：Held-out 分頁 selectbox 切換任務時 Streamlit widget key 不更新 URL/描述；
+  三 tab 共用 `agent_url_text` 導致提交錯 tab 的值。
+- **修正**：`sync_task_form_on_selection()` + 各 tab 讀 `{prefix}_task/_url`；GitHub train preset 對齊 `tasks.yaml`（`https://github.com`）。
+- **驗證**：`tests/unit/test_agent_ui.py`；Zeabur smoke held-out 切換 URL 一致。

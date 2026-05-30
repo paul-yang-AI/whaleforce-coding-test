@@ -19,6 +19,19 @@ def test_sqlite_wal_mode_enabled() -> None:
 
 
 @pytest.mark.unit
+def test_sqlite_journal_mode_env_override(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    db_file = tmp_path / "isolated.db"
+    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_file.as_posix()}")
+    monkeypatch.setenv("SQLITE_JOURNAL_MODE", "TRUNCATE")
+    conn = get_connection()
+    try:
+        mode = conn.execute("PRAGMA journal_mode").fetchone()[0]
+        assert mode.lower() == "truncate"
+    finally:
+        conn.close()
+
+
+@pytest.mark.unit
 def test_sqlite_wal_concurrent_writes() -> None:
     run_id = create_run("stress")
     errors: list[str] = []

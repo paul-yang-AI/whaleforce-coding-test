@@ -256,9 +256,22 @@ Train KPI 路徑仍 **Tier0-only（$0/filing）**。LLM 路徑可經 eval flags 
 
 ---
 
+## Harness 強化（Phase 1 — 已落地）
+
+| 項目 | 修正 | 狀態 |
+|------|------|------|
+| Agent eval Context 隔離 | `PlaywrightExecutor.reset_context()`；`run_agent_eval` 每 task 重置 | ✅ |
+| Budget 原子性 | `llm_budget_guard()` + `threading.RLock` | ✅ |
+| LLM 成本精度 | `litellm.completion_cost()` + token fallback | ✅ |
+| SQLite journal | `SQLITE_JOURNAL_MODE`（預設 WAL） | ✅ |
+
+**仍列 Backlog（Phase 3+）**：footnote regex 泛化、TOC stub whitelist、fuzzy section title、表格結構保留、DOM-path 索引、PostgreSQL 遷移。
+
+---
+
 ## 可觀測性（Observability）
 
-- `cost_events`：每次 LLM 呼叫含 `run_id`、`tier`、`call_site`、`attempt`、`usd`
+- `cost_events`：每次 LLM 呼叫含 `run_id`、`tier`、`call_site`、`attempt`、`usd`（優先 `litellm.completion_cost`）
 - `run_steps`：agent steps 含 `failure_type`、`recovery_strategy`、log JSON 中 `extracted_result`
 - `reports/eval_train.csv`：SEC + agent 統一 eval 匯出
 - `reports/eval_summary.json`：aggregate metrics 供分析

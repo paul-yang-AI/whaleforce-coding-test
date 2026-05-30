@@ -531,7 +531,12 @@ def run_agent_eval(
     executor = PlaywrightExecutor(headless=True, timeout_ms=20000)
     executor.start()
     try:
-        return [evaluate_agent_task(t, executor=executor) for t in tasks]
+        results: list[AgentEvalResult] = []
+        for i, task in enumerate(tasks):
+            if i > 0:
+                executor.reset_context()
+            results.append(evaluate_agent_task(task, executor=executor))
+        return results
     finally:
         executor.close()
 
