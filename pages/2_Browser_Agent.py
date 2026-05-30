@@ -5,12 +5,19 @@ from __future__ import annotations
 import json
 import threading
 import uuid
+from pathlib import Path
 
 import streamlit as st
+import yaml
 
 from shared_harness import job_store
+from shared_harness.agent_ui import agent_heldout_badge, baseline_by_task_id, format_heldout_task_label
 from task1_agent.agent.browser import PlaywrightExecutor
 from task1_agent.agent.loop import run as agent_run
+
+_ROOT = Path(__file__).resolve().parent.parent
+_TASKS_YAML = _ROOT / "task1_agent" / "eval" / "tasks.yaml"
+_AGENT_HELDOUT_BASELINE = _ROOT / "reports" / "agent_heldout_baseline.json"
 
 _PRESETS = [
     {
@@ -38,12 +45,6 @@ _PRESETS = [
         "category": "search",
     },
     {
-        "label": "🔍 DuckDuckGo — 搜尋查詢（實驗，不穩定）",
-        "task": "Search DuckDuckGo for 'playwright browser automation' and verify results appear.",
-        "url": "https://duckduckgo.com",
-        "category": "search",
-    },
-    {
         "label": "🔧 httpbin — 檢視 Headers",
         "task": "Navigate to httpbin.org/headers and extract the User-Agent header value.",
         "url": "https://httpbin.org/headers",
@@ -56,6 +57,132 @@ _PRESETS = [
         "category": "navigation",
     },
 ]
+
+
+def _load_tasks_split(split: str) -> list[dict]:
+    if not _TASKS_YAML.exists():
+        return []
+    data = yaml.safe_load(_TASKS_YAML.read_text(encoding="utf-8"))
+    return [
+        t
+        for t in data.get("tasks", [])
+        if t.get("split") == split and not t.get("smoke_only")
+    ]
+
+
+def _load_heldout_baseline() -> tuple[dict[str, dict], dict]:
+    if not _AGENT_HELDOUT_BASELINE.exists():
+        return {}, {}
+    try:
+        payload = json.loads(_AGENT_HELDOUT_BASELINE.read_text(encoding="utf-8"))
+    except Exception:
+        return {}, {}
+    rows = payload.get("heldout", [])
+    return baseline_by_task_id(rows), payload.get("summary", {})
+
+
+def _start_agent_run(task: str, start_url: str) -> None:
+    if _is_agent_running():
+        st.error("已有任務執行中，無法同時啟動多個代理。")
+        return
+    if not task.strip():
+        st.error("請輸入任務描述。")
+        return
+    if not start_url.strip():
+        st.error("請輸入起始 URL。")
+        return
+
+    run_id = str(uuid.uuid4())
+    cancel_event = threading.Event()
+    st.session_state["agent_run_id"] = run_id
+    st.session_state["agent_cancel"] = cancel_event
+
+    job_store.create_run("agent", run_id=run_id, label=task[:120])
+
+    def _run_agent():
+        executor = PlaywrightExecutor(headless=True)
+        executor.start()
+        try:
+            agent_run(
+                task_description=task,
+                start_url=start_url.strip(),
+                run_id=run_id,
+                cancel_event=cancel_event,
+                execute_action=executor,
+            )
+        finally:
+            executor.close()
+
+    thread = threading.Thread(target=_run_agent, daemon=True)
+    thread.start()
+    st.session_state["agent_auto_refresh"] = True
+    st.success(f"✅ 任務已提交！執行 ID：`{run_id[:8]}…`")
+
+
+def _render_task_form(
+    *,
+    key_prefix: str,
+    default_task: str,
+    default_url: str,
+) -> tuple[str, str]:
+    task = st.text_area(
+        "任務描述",
+        value=default_task,
+        placeholder="以自然語言描述代理應執行的操作…",
+        height=80,
+        key=f"{key_prefix}_task",
+    )
+    start_url = st.text_input(
+        "起始 URL",
+        value=default_url,
+        placeholder="https://example.com",
+        key=f"{key_prefix}_url",
+    )
+    st.session_state["agent_task_text"] = task
+    st.session_state["agent_url_text"] = start_url
+
+    if start_url.strip() and "google.com" in start_url.strip().lower():
+        st.warning(
+            "⚠️ **Google 不建議用於 demo**：consent 橫幅與動態 DOM 易導致 agent 在 `type` 迴圈中卡住。"
+        )
+    return task, start_url
+
+
+def _render_run_buttons(key_prefix: str) -> None:
+    _agent_running = _is_agent_running()
+    if _agent_running:
+        st.warning("⏳ 已有任務執行中，請等待完成或按「停止」。")
+
+    col1, col2 = st.columns([3, 1])
+    submit = col1.button(
+        "🚀 執行任務",
+        type="primary",
+        use_container_width=True,
+        disabled=_agent_running,
+        key=f"{key_prefix}_submit",
+    )
+    stop = col2.button(
+        "⏹️ 停止",
+        type="secondary",
+        use_container_width=True,
+        key=f"{key_prefix}_stop",
+    )
+
+    if submit:
+        _start_agent_run(
+            st.session_state.get("agent_task_text", ""),
+            st.session_state.get("agent_url_text", ""),
+        )
+
+    if stop:
+        cancel = st.session_state.get("agent_cancel")
+        if cancel and not cancel.is_set():
+            cancel.set()
+            st.session_state["agent_auto_refresh"] = False
+            st.warning("⏹️ 已發送停止訊號，任務將在下一步邊界取消。")
+        else:
+            st.info("目前沒有進行中的任務。")
+
 
 _ACTION_ICONS = {
     "navigate": "🌐",
@@ -279,102 +406,84 @@ st.markdown(
     '<h1 style="margin-bottom:0;">🤖 瀏覽器自動化代理</h1>',
     unsafe_allow_html=True,
 )
-st.caption("計畫 → 執行 → 觀察 → 驗證 → 反思 &nbsp;|&nbsp; LLM 驅動規劃 &nbsp;|&nbsp; 分類式錯誤恢復")
-
-preset_labels = [p["label"] for p in _PRESETS]
-preset_choice = st.selectbox("任務預設", preset_labels, index=0)
-selected_preset = _PRESETS[preset_labels.index(preset_choice)]
-
-if selected_preset["task"]:
-    default_task = selected_preset["task"]
-    default_url = selected_preset["url"]
-else:
-    default_task = st.session_state.get("agent_task_text", "")
-    default_url = st.session_state.get("agent_url_text", "")
-
-task = st.text_area(
-    "任務描述",
-    value=default_task,
-    placeholder="以自然語言描述代理應執行的操作…",
-    height=80,
+st.caption(
+    "計畫 → 執行 → 觀察 → 驗證 → 反思 &nbsp;|&nbsp; "
+    "Train KPI 5/5（Eval） &nbsp;|&nbsp; Held-out 基線見「泛化驗證」分頁"
 )
-start_url = st.text_input(
-    "起始 URL",
-    value=default_url,
-    placeholder="https://example.com",
-)
-
-st.session_state["agent_task_text"] = task
-st.session_state["agent_url_text"] = start_url
-
-if start_url.strip() and "google.com" in start_url.strip().lower():
-    st.warning(
-        "⚠️ **Google 不建議用於 demo**：consent 橫幅與動態 DOM 易導致 agent 在 `type` 迴圈中卡住。"
-        "Train eval 使用 Wikipedia；DuckDuckGo 為 held-out 實驗。"
-    )
-
-_agent_running = _is_agent_running()
-if _agent_running:
-    st.warning("⏳ 已有任務執行中，請等待完成或按「停止」。")
-
-col1, col2 = st.columns([3, 1])
-submit = col1.button(
-    "🚀 執行任務",
-    type="primary",
-    use_container_width=True,
-    disabled=_agent_running,
-)
-stop = col2.button("⏹️ 停止", type="secondary", use_container_width=True)
 
 if "agent_run_id" not in st.session_state:
     st.session_state["agent_run_id"] = None
 if "agent_cancel" not in st.session_state:
     st.session_state["agent_cancel"] = None
 
-if submit:
-    if _agent_running:
-        st.error("已有任務執行中，無法同時啟動多個代理。")
-    elif not task.strip():
-        st.error("請輸入任務描述。")
-    elif not start_url.strip():
-        st.error("請輸入起始 URL。")
+tab_train, tab_heldout, tab_custom = st.tabs(
+    ["📋 基準任務（Train）", "🔬 泛化驗證（Held-out）", "✏️ 自訂任務"]
+)
+
+with tab_train:
+    st.markdown(
+        "Train eval **5/5** regression contract（`tasks.yaml` split=train）。"
+        "不在此分頁的 DuckDuckGo 等 held-out 任務請至「泛化驗證」。"
+    )
+    preset_labels = [p["label"] for p in _PRESETS]
+    preset_choice = st.selectbox("任務預設", preset_labels, index=0, key="train_preset")
+    selected_preset = _PRESETS[preset_labels.index(preset_choice)]
+    if selected_preset["task"]:
+        t_default, u_default = selected_preset["task"], selected_preset["url"]
     else:
-        run_id = str(uuid.uuid4())
-        cancel_event = threading.Event()
-        st.session_state["agent_run_id"] = run_id
-        st.session_state["agent_cancel"] = cancel_event
+        t_default = st.session_state.get("agent_task_text", "")
+        u_default = st.session_state.get("agent_url_text", "")
+    _render_task_form(key_prefix="train", default_task=t_default, default_url=u_default)
+    _render_run_buttons("train")
 
-        job_store.create_run("agent", run_id=run_id, label=task[:120])
+with tab_heldout:
+    st.markdown(
+        "Held-out **不在 train KPI 內**；徽章來自 `reports/agent_heldout_baseline.json`。"
+        "線上執行結果可能因網站/速率限制與離線基線略有差異。"
+    )
+    baseline_map, summary = _load_heldout_baseline()
+    if summary:
+        st.caption(
+            f"離線基線：**{summary.get('heldout_ok', '?')}/{summary.get('heldout_tasks', '?')}** "
+            f"`failure_category=ok`（詳見 Eval → Held-out 基線）。"
+        )
+    elif _AGENT_HELDOUT_BASELINE.exists() is False:
+        st.caption("執行 `python scripts/run_agent_heldout_baseline.py` 產生基線報告。")
 
-        def _run_agent():
-            executor = PlaywrightExecutor(headless=True)
-            executor.start()
-            try:
-                agent_run(
-                    task_description=task,
-                    start_url=start_url.strip(),
-                    run_id=run_id,
-                    cancel_event=cancel_event,
-                    execute_action=executor,
-                )
-            finally:
-                executor.close()
-
-        thread = threading.Thread(target=_run_agent, daemon=True)
-        thread.start()
-        st.session_state["agent_auto_refresh"] = True
-        st.success(f"✅ 任務已提交！執行 ID：`{run_id[:8]}…`")
-
-if stop:
-    cancel = st.session_state.get("agent_cancel")
-    if cancel and not cancel.is_set():
-        cancel.set()
-        st.session_state["agent_auto_refresh"] = False
-        st.warning("⏹️ 已發送停止訊號，任務將在下一步邊界取消。")
+    heldout_tasks = _load_tasks_split("heldout")
+    if not heldout_tasks:
+        st.info("tasks.yaml 中尚無 held-out 任務。")
     else:
-        st.info("目前沒有進行中的任務。")
+        labels = [format_heldout_task_label(t, baseline_map.get(t["id"])) for t in heldout_tasks]
+        choice = st.selectbox("選擇 held-out 任務", labels, index=0, key="heldout_select")
+        selected = heldout_tasks[labels.index(choice)]
+        row = baseline_map.get(selected["id"])
+        if row:
+            emoji, blabel = agent_heldout_badge(
+                failure_category=str(row.get("failure_category", "")),
+                status=str(row.get("status", "")),
+                silent_failure=int(row.get("silent_failure") or 0),
+            )
+            st.info(f"{emoji} **基線預期**：{blabel}（steps={row.get('steps', '—')}）。")
+        elif selected.get("notes"):
+            st.info(selected["notes"])
+        _render_task_form(
+            key_prefix="heldout",
+            default_task=selected.get("description", ""),
+            default_url=selected.get("start_url", ""),
+        )
+        _render_run_buttons("heldout")
 
-# Results display — fragment polls lightly while running; full panel when done
+with tab_custom:
+    st.markdown("任意自然語言任務 — **不計入** train/held-out KPI。")
+    _render_task_form(
+        key_prefix="custom",
+        default_task=st.session_state.get("agent_task_text", ""),
+        default_url=st.session_state.get("agent_url_text", ""),
+    )
+    _render_run_buttons("custom")
+
+# Results display — shared across tabs
 run_id = st.session_state.get("agent_run_id")
 if run_id:
     st.divider()
@@ -420,7 +529,8 @@ with col_info2:
 - ✅ 頁面導航 + 驗證
 - ✅ 內容/資料抽取
 - ✅ 資訊查詢（新聞、維基）
-- ✅ 搜尋任務（Wikipedia；DuckDuckGo 僅 demo，不計 eval）
+- ✅ 搜尋任務（Wikipedia 等 train 任務）
+- ✅ Held-out 任務見「泛化驗證」分頁（2/4 離線基線）
 - ✅ 多步驟互動
 
 **已知限制：**

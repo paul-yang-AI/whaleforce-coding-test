@@ -79,7 +79,7 @@ streamlit run streamlit_app.py    # 啟動多頁 Web 介面
 |---|---|---|
 | 首頁 Home | 總覽與架構說明 | `/` |
 | SEC 10-K 抽取 | 任務二（基準集 / 泛化驗證 / 自訂） | 側邊欄 → SEC 10-K |
-| 瀏覽器代理 | 任務一 | 側邊欄 → Browser Agent |
+| **Browser Agent** | 任務一 | 側邊欄 → Browser Agent（**基準 / 泛化驗證 / 自訂** 三分頁） |
 | 評估儀表板 | Train KPI + Held-out 基線 + 即時紀錄 | 側邊欄 → Eval |
 
 部署關鍵環境變數見下方 [設定與環境變數](#設定與環境變數)。

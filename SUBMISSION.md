@@ -38,6 +38,7 @@
 - [ ] **Browser Agent**: preset "Hacker News" → verify multi-step + extracted title
 - [ ] **SEC 10K → 基準集**: MSFT extract → **Required KPI 4/4** banner at top; INTC/Citi **3/3**
 - [ ] **SEC 10K → 基準集**: Citi → Extract → 數秒內完成；**1A/7/8 + 9A/9B 長正文**；Item 10–14 incorporated；front 索引列 honest missing
+- [ ] **Browser Agent → 泛化驗證**: held-out 4 任務 + 基線 badge（2/4 ok）
 - [ ] **SEC 10K → 泛化驗證**: JPM → **4/4 required**；extract runs
 - [ ] **SEC 10K**: JSON/Markdown 下載（metrics 下方，應即時無長等待）
 - [ ] **Eval → 基準 Train**: 載入存檔結果正常
