@@ -36,9 +36,11 @@
       "text_len": 0
     },
     "3": {
-      "status": "missing",
-      "confidence": 0.0,
-      "text_len": 0
+      "status": "extracted",
+      "confidence": 0.9,
+      "text_len": 137,
+      "start": 4377,
+      "end": 4514
     },
     "4": {
       "status": "missing",

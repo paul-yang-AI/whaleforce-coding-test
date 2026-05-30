@@ -19,7 +19,13 @@
       "stress": [
         "ixbrl",
         "dense_tables"
-      ]
+      ],
+      "required_items": [
+        "1A",
+        "7",
+        "8"
+      ],
+      "notes": "Cross-reference index 10-K: no in-body Item 1 Business anchor (EOF page list only). Required excludes Item 1; same KPI set as Citi bank format."
     },
     {
       "ticker": "C",
@@ -36,7 +42,13 @@
         "1A",
         "7",
         "8"
-      ]
+      ],
+      "expected_missing": [
+        "1",
+        "6",
+        "16"
+      ],
+      "notes": "Bank mega-TOC: Item 1 has no standalone Business section; Item 3 extracted as note pointer (See Note 30); Item 6 [Reserved]; Item 16 often omitted."
     },
     {
       "ticker": "BRK.B",

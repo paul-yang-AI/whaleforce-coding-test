@@ -377,3 +377,14 @@ Record v1→v2 changes with Failed Path / Resolution / Validation.
   4. `_dedupe_segments_by_item`, `_is_incorporation_index_stub` for Part III `*` footnotes.
   5. `item_heuristics.py`: `not_applicable`, note cross-ref warnings in `validate.py`.
 - **Validation**: Citi **9A (~6k) / 9B (~53k)** extracted; required **1A/7/8** unchanged; Items 10–14 incorporated; front stubs → honest `missing`; `149` pytest green; gold regenerated.
+
+### `kpi_alignment_and_jpm_header_quality` (2026-05-29)
+
+- **Failed path**: INTC Item 1 cross-ref counted as required pass while Citi Item 1 honest missing — asymmetric KPI. JPM held-out 2/4: `_pick_best_start` returned first front index header (`outside[0]`) instead of prose header at 6796/47340.
+- **Resolution** (generic):
+  1. Manifest: INTC + Citi `required_items = [1A,7,8]` with `notes`; Citi `expected_missing` for honest gaps.
+  2. `_header_start_quality_key` + min-quality `_pick_best_start` (fixes JPM 1/1A without ticker branches).
+  3. Section titles allow trailing period (`Business.?`, `Risk Factors.?`).
+  4. `_supplement_note_cross_ref_items` for Item 3 note pointers.
+  5. Eval CSV: `required_prose_count`, `required_cross_ref_count`, `expected_missing_ok_count`.
+- **Validation**: Train 3/3 + 3/3 + 4/4 MSFT; JPM held-out **4/4**; Citi Item 3 note cross-ref extracted; held-out **6/8** ok; **151** pytest green; gold regenerated.

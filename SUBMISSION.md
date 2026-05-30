@@ -3,10 +3,10 @@
 ## Reviewer Quick Start
 
 1. **SEC 10K → 基準集（Train · 3）** — MSFT extract → Item tree + quality badges  
-2. **SEC 10K → 泛化驗證（Held-out · 8）** — JPM (expected partial fail) or BRK.B (pass)  
+2. **SEC 10K → 泛化驗證（Held-out · 8）** — JPM (4/4 bank TOC pass) or AAPL 2010 (expected gap)  
 3. **SEC 10K → 自訂報表** — paste any accession for unseen filing test  
 4. **Eval → 基準評估 Train** — click「載入存檔結果」  
-5. **Eval → Held-out 基線** — read `heldout_baseline.json` table (5/8 ok)
+5. **Eval → Held-out 基線** — read `heldout_baseline.json` table (6/8 ok)
 
 > Manifest has **11 filings** (3 train + 8 held-out). Train-only dropdown is intentional eval discipline.
 
@@ -36,12 +36,12 @@
 ### Zeabur smoke (after push → auto redeploy)
 - [ ] **Browser Agent**: preset "Navigate to Example.com" → Run → Refresh → `success` + **Result** block
 - [ ] **Browser Agent**: preset "Hacker News" → verify multi-step + extracted title
-- [ ] **SEC 10K → 基準集**: MSFT → Extract → Item tree; **INTC → 1A/7/8 應為長正文**（Item 1 可能仍 cross-ref）
+- [ ] **SEC 10K → 基準集**: MSFT → Extract → Item tree; **INTC → 1A/7/8 應為長正文**（required 不含 Item 1）
 - [ ] **SEC 10K → 基準集**: Citi → Extract → 數秒內完成；**1A/7/8 + 9A/9B 長正文**；Item 10–14 incorporated；front 索引列 honest missing
-- [ ] **SEC 10K → 泛化驗證**: JPM → badge shows partial-fail expectation; extract runs
+- [ ] **SEC 10K → 泛化驗證**: JPM → **4/4 required**；extract runs
 - [ ] **SEC 10K**: JSON/Markdown 下載（metrics 下方，應即時無長等待）
 - [ ] **Eval → 基準 Train**: 載入存檔結果正常
-- [ ] **Eval → Held-out 基線**: table shows 5/8 ok
+- [ ] **Eval → Held-out 基線**: table shows 6/8 ok
 - [ ] **Eval**: 即時紀錄 tab 可見 Agent + SEC runs
 
 ### GitHub
@@ -86,6 +86,6 @@ streamlit run streamlit_app.py
 
 ## Known eval numbers (honest, from CSV / baseline)
 
-- **SEC train**: 3/3 filings `failure_category=ok`; Tier0 $0.00/filing
-- **SEC held-out (Tier0, 8 cached)**: 5/8 ok; 5/8 strict required pass — see `reports/heldout_baseline.json`
+- **SEC train**: 3/3 filings `failure_category=ok` (MSFT 4/4, INTC/Citi 3/3 required); Tier0 $0.00/filing
+- **SEC held-out (Tier0, 8 cached)**: 6/8 ok; 6/8 strict required pass — see `reports/heldout_baseline.json`
 - **Agent train**: 5/5 success (100%); silent_failure=0; search validated on Wikipedia (DDG heldout)

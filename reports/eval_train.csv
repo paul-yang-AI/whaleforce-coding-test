@@ -1,9 +1,4 @@
-task,record_id,domain,task_type,split,status,steps,elapsed_s,recovery_count,llm_calls,silent_failure,required_items_found,required_items_total,gold_items_matched,gold_items_total,gold_boundary_p95,toc_header_agreement,token_ratio_p50,char_coverage,tier0_extracted_count,incorporated_count,missing_count,low_confidence_count,usd_per_run,fallback_used,failure_category,extracted_result
-sec_10k,0000950170-24-087843,MSFT,extract,train,ok,,,0,0,0,4,4,22,22,0,1.0,0.9994,0.9877,22,0,0,0,0.0,False,ok,
-sec_10k,0000050863-25-000009,INTC,extract,train,ok,,,0,0,0,4,4,22,22,0,0.7727,0.997,0.8612,17,5,0,0,0.0,False,ok,
-sec_10k,0000831001-25-000067,C,extract,train,ok,,,0,0,0,3,3,17,17,0,0.7059,0.9819,0.9964,12,5,5,0,0.0,False,ok,
-agent,smoke_example_title,example.com,navigate,train,success,2,6.95,0,1,0,,,,,,,,,,,,,0.000675,,ok,The page title is 'Example Domain'.
-agent,smoke_httpbin_headers,httpbin.org,extract,train,success,2,5.66,0,1,0,,,,,,,,,,,,,0.001201,,ok,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-agent,wikipedia_search,wikipedia.org,search,train,success,3,9.94,0,2,0,,,,,,,,,,,,,0.007701,,ok,Successfully navigated to the Alan Turing Wikipedia article page. The page title is 'Alan Turing - Wikipedia' and contains his biographical information.
-agent,github_navigate_repo,github.com,navigate,train,success,3,9.29,0,2,0,,,,,,,,,,,,,0.008423,,ok,The repository title 'python / cpython' is visible on the page at https://github.com/python/cpython.
-agent,hacker_news_top,news.ycombinator.com,extract,train,success,5,267.86,1,2,0,,,,,,,,,,,,,0.009892,,ok,Five frontier LLMs disagree on 67% of 1k real-world fact-check claims
+task,record_id,domain,task_type,split,status,steps,elapsed_s,recovery_count,llm_calls,silent_failure,required_items_found,required_items_total,gold_items_matched,gold_items_total,gold_boundary_p95,toc_header_agreement,token_ratio_p50,char_coverage,tier0_extracted_count,incorporated_count,missing_count,low_confidence_count,toc_stub_count,required_quality_failures,required_prose_count,required_cross_ref_count,expected_missing_ok_count,usd_per_run,fallback_used,failure_category,extracted_result
+sec_10k,0000950170-24-087843,MSFT,extract,train,ok,,,0,0,0,4,4,22,22,0,0.9545,0.999,0.7971,21,0,0,0,0,0,4,0,0,0.0,False,ok,
+sec_10k,0000050863-25-000009,INTC,extract,train,ok,,,0,0,0,3,3,22,22,0,0.7727,0.9975,0.8612,17,5,0,0,0,0,3,0,0,0.0,False,ok,
+sec_10k,0000831001-25-000067,C,extract,train,ok,,,0,0,0,3,3,14,14,0,0.6429,1.0,0.9962,9,5,8,0,0,0,3,0,3,0.0,False,ok,

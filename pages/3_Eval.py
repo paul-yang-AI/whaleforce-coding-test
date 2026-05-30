@@ -182,6 +182,8 @@ def _render_heldout_baseline() -> None:
                 "Ticker": row.get("ticker", ""),
                 "Accession": row.get("accession", ""),
                 "Required": req,
+                "prose": row.get("required_prose_count", ""),
+                "exp_missing_ok": row.get("expected_missing_ok_count", 0),
                 "failure_category": cat,
                 "狀態": status,
                 "toc_stub": row.get("toc_stub_count", 0),
@@ -419,7 +421,7 @@ with tab_limits:
 |------|------|
 | ✅ Train 良好 | MSFT、INTC、Citi（基準集分頁） |
 | ✅ Held-out 通過 | BRK.B、O、NEM、GROW、MSFT FY2020 |
-| ⚠️ Held-out 已知 gap | JPM 2/4；AAPL 2010 2/4 |
+| ⚠️ Held-out 已知 gap | AAPL 2010 2/4；KSCP 10-K/A 0/4 |
 | ❌ Held-out 預期失敗 | KSCP 10-K/A 0/4 |
 | ⚠️ 困難 | incorporated by reference、iXBRL 複雜 |
 | 🔍 搜尋 | 建議 **ticker**（GOOGL）或 accession；`google` 等單字易 EFTS 雜訊 |

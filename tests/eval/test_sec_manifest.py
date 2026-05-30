@@ -82,6 +82,8 @@ def test_run_eval_csv_at_least_three_rows(tmp_path: Path) -> None:
     assert len(sec_rows) >= 3
     assert "failure_category" in rows[0]
     assert "required_items_found" in rows[0]
+    assert "required_prose_count" in rows[0]
+    assert "expected_missing_ok_count" in rows[0]
 
     for row in sec_rows:
         assert row["failure_category"] == "ok"

@@ -51,6 +51,9 @@ EVAL_CSV_FIELDS = [
     "low_confidence_count",
     "toc_stub_count",
     "required_quality_failures",
+    "required_prose_count",
+    "required_cross_ref_count",
+    "expected_missing_ok_count",
     "usd_per_run",
     "fallback_used",
     "failure_category",
@@ -78,6 +81,9 @@ class FilingEvalResult:
     low_confidence_count: int = 0
     toc_stub_count: int = 0
     required_quality_failures: int = 0
+    required_prose_count: int = 0
+    required_cross_ref_count: int = 0
+    expected_missing_ok_count: int = 0
     usd_per_filing: float = 0.0
     fallback_used: bool = False
     failure_category: str = "ok"
@@ -110,6 +116,9 @@ class FilingEvalResult:
             "low_confidence_count": self.low_confidence_count,
             "toc_stub_count": self.toc_stub_count,
             "required_quality_failures": self.required_quality_failures,
+            "required_prose_count": self.required_prose_count,
+            "required_cross_ref_count": self.required_cross_ref_count,
+            "expected_missing_ok_count": self.expected_missing_ok_count,
             "usd_per_run": round(self.usd_per_filing, 6),
             "fallback_used": self.fallback_used,
             "failure_category": self.failure_category,
@@ -161,6 +170,9 @@ class AgentEvalResult:
             "low_confidence_count": "",
             "toc_stub_count": "",
             "required_quality_failures": "",
+            "required_prose_count": "",
+            "required_cross_ref_count": "",
+            "expected_missing_ok_count": "",
             "usd_per_run": round(self.usd_per_task, 6),
             "fallback_used": "",
             "failure_category": self.failure_category,
@@ -245,21 +257,34 @@ def evaluate_filing(
     )
 
     required = filing.get("required_items") or required_items or ["1", "1A", "7", "8"]
+    expected_missing = filing.get("expected_missing") or []
     by_id = {item.item_id: item for item in extraction.items}
     required_found = sum(
         1 for item_id in required if item_id in by_id and _required_item_satisfied(by_id[item_id])
     )
     toc_stub_count = 0
     required_quality_failures = 0
+    required_prose_count = 0
+    required_cross_ref_count = 0
     for item_id in required:
         item = by_id.get(item_id)
         if item is None:
             continue
         quality = assess_required_item(item_id, item.text, item.status.value)
+        if quality == "ok":
+            required_prose_count += 1
+        elif quality == "cross_ref":
+            required_cross_ref_count += 1
         if quality == "toc_stub":
             toc_stub_count += 1
         if quality in {"toc_stub", "missing"}:
             required_quality_failures += 1
+
+    expected_missing_ok_count = sum(
+        1
+        for item_id in expected_missing
+        if item_id in by_id and by_id[item_id].status == ItemStatus.MISSING
+    )
 
     gold = _load_gold(accession, gold_dir)
     gold_items = (gold or {}).get("items", {})
@@ -320,6 +345,9 @@ def evaluate_filing(
         ),
         toc_stub_count=toc_stub_count,
         required_quality_failures=required_quality_failures,
+        required_prose_count=required_prose_count,
+        required_cross_ref_count=required_cross_ref_count,
+        expected_missing_ok_count=expected_missing_ok_count,
         usd_per_filing=0.0,
         fallback_used=use_llm_fallback or use_arbiter,
     )

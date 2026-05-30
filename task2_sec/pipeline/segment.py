@@ -13,6 +13,7 @@ warnings.filterwarnings("ignore", category=UserWarning, message=".*XML.*")
 
 from task2_sec.pipeline.normalize import normalize
 from task2_sec.pipeline.incorporation import detect_incorporation
+from task2_sec.pipeline.item_heuristics import detect_note_cross_reference
 
 # Line-start item headers only (avoids inline "see Item 1 above").
 # Longer ids first so "Item 10" is not captured as Item "1".
@@ -27,8 +28,8 @@ _LINE = r"(?:^|\n)"
 _SECTION_NAME_MAP: list[tuple[str, str]] = [
     # Cross-reference 10-Ks often use SEC-standard Business subheadings instead of "Item 1".
     (_LINE + r"\s*General\s+[Dd]evelopment\s+of\s+[Bb]usiness\s*\n", "1"),
-    (_LINE + r"\s*Business\s*\n", "1"),
-    (_LINE + r"\s*Risk\s+Factors\s*\n", "1A"),
+    (_LINE + r"\s*Business\.?\s*\n", "1"),
+    (_LINE + r"\s*Risk\s+Factors\.?\s*\n", "1A"),
     (_LINE + r"\s*Unresolved\s+Staff\s+Comments\s*\n", "1B"),
     (_LINE + r"\s*Cybersecurity\s*\n", "1C"),
     (_LINE + r"\s*Properties\s*\n", "2"),
@@ -92,6 +93,17 @@ _PAGE_RANGE_LINE_RE = re.compile(
 )
 _INCORPORATION_PREVIEW_CHARS = 200
 _EOF_CLUSTER_FRAC = 0.85
+# Item 3 often points to a financial statement note instead of standalone prose.
+_NOTE_XREF_SEGMENT_RES: list[tuple[re.Pattern[str], str]] = [
+    (
+        re.compile(
+            r"(?:^|\n)\s*Legal\s+Proceedings[^\n]{0,140}"
+            r"See\s+Note\s+\d+\s+to\s+the\s+Consolidated\s+Financial\s+Statements[^\n]*",
+            re.IGNORECASE,
+        ),
+        "3",
+    ),
+]
 _SHORT_SEGMENT_CHARS = 300  # default; use _scale_short_segment_chars(body_len)
 _TOC_CLUSTER_GAP = 8000
 # Section titles that often appear in tables/TOC — require a unique content-zone match.
@@ -351,6 +363,57 @@ def is_page_reference_text(text: str) -> bool:
     return len(page_refs) >= 2
 
 
+def _header_start_quality_key(
+    body: str,
+    pos: int,
+    toc_zones: list[tuple[int, int]],
+) -> tuple[int, int, int]:
+    """Sort key for regex/TOC header picks — prefer prose over index rows."""
+    preview = _anchor_preview(body, pos, window_chars=220)
+    indexish = 1 if (
+        _is_topic_page_index_block(preview)
+        or is_page_reference_text(preview)
+        or _is_mega_toc_segment(preview)
+    ) else 0
+    in_toc = 1 if _in_toc_zone(pos, toc_zones) else 0
+    # Among equal quality, prefer later match (legacy starts[-1] for small docs).
+    return (indexish, in_toc, -pos)
+
+
+def _supplement_note_cross_ref_items(
+    body: str,
+    segments: list[SegmentResult],
+    toc_zones: list[tuple[int, int]],
+) -> list[SegmentResult]:
+    """Add short note-pointer rows (e.g. Item 3 → See Note N) when no header segment exists."""
+    found = {s.item_id for s in segments}
+    added = False
+    for pattern, item_id in _NOTE_XREF_SEGMENT_RES:
+        if item_id in found:
+            continue
+        for match in pattern.finditer(body):
+            snippet = body[match.start() : match.start() + 400]
+            if not detect_note_cross_reference(snippet)[0]:
+                continue
+            segments.append(
+                SegmentResult(
+                    item_id=item_id,
+                    start=match.start(),
+                    end=match.start(),
+                    method=SegmentMethod.SECTION_NAME,
+                )
+            )
+            added = True
+            break
+    if not added:
+        return segments
+    segments = sorted(segments, key=lambda s: s.start)
+    body_len = len(body)
+    for i, seg in enumerate(segments):
+        seg.end = segments[i + 1].start if i + 1 < len(segments) else body_len
+    return segments
+
+
 class SegmentMethod(str, Enum):
     TOC = "toc"
     REGEX = "regex"
@@ -574,6 +637,8 @@ class Segmenter:
         merged = self._supplement_from_section_names(
             body, merged, name_by_id=best_names, toc_zones=toc_zones
         )
+        merged = _dedupe_segments_by_item(body, merged, toc_zones)
+        merged = _supplement_note_cross_ref_items(body, merged, toc_zones)
         merged = _dedupe_segments_by_item(body, merged, toc_zones)
         for i, seg in enumerate(merged):
             seg.end = merged[i + 1].start if i + 1 < len(merged) else len(body)
@@ -827,7 +892,10 @@ class Segmenter:
         if toc_zones:
             outside = [s for s in starts if not _in_toc_zone(s, toc_zones)]
             if outside:
-                return outside[0]
+                return min(
+                    outside,
+                    key=lambda s: _header_start_quality_key(body, s, toc_zones),
+                )
 
         body_len = len(body)
         if body_len > 20000:
@@ -835,9 +903,12 @@ class Segmenter:
             hi = body_len - lo
             content_starts = [s for s in starts if lo < s < hi]
             if content_starts:
-                return content_starts[0]
+                return min(
+                    content_starts,
+                    key=lambda s: _header_start_quality_key(body, s, toc_zones),
+                )
 
-        return starts[-1]
+        return min(starts, key=lambda s: _header_start_quality_key(body, s, toc_zones))
 
     def _segment_from_section_names(
         self,

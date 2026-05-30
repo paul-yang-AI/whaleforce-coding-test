@@ -165,6 +165,50 @@ def test_find_front_index_zone_detects_bank_mega_toc() -> None:
 
 
 @pytest.mark.unit
+def test_pick_best_start_prefers_prose_over_front_index() -> None:
+    from task2_sec.pipeline.segment import Segmenter
+
+    body = (
+        "Item 1.\n\nBusiness.\n\n1\n\nOverview\n\n1\n\n"
+        "Business segments\n\n"
+        + ("padding\n" * 400)
+        + "Item 1. Business.\n\nOverview\nReal business narrative about operations and segments.\n"
+        + ("More prose about the company. " * 80)
+        + "\nItem 1A. Risk Factors.\nThe following discussion sets forth material risks.\n"
+        + ("Risk detail paragraph. " * 80)
+    )
+    segmenter = Segmenter()
+    starts_by_id = {"1": [body.find("Item 1.\n"), body.find("Item 1. Business.")], "1A": []}
+    for m in __import__("re").finditer(r"Item 1A", body):
+        starts_by_id.setdefault("1A", []).append(m.start())
+    pick = segmenter._pick_best_start(starts_by_id["1"], body)
+    assert "Real business narrative" in body[pick : pick + 500]
+    pick_1a = segmenter._pick_best_start(starts_by_id["1A"], body)
+    assert "material risks" in body[pick_1a : pick_1a + 200]
+
+
+@pytest.mark.unit
+def test_note_cross_ref_supplements_item_3() -> None:
+    from task2_sec.pipeline.validate import validate_segment
+
+    html = """
+    <html><body>
+    <p>{}</p>
+    <div>
+    Legal Proceedings—See Note 30 to the Consolidated Financial Statements
+    301–308
+    </div>
+    </body></html>
+    """.format("filler " * 500)
+    segmenter = Segmenter()
+    body, segments = segmenter.segment(html, use_llm_fallback=False)
+    assert any(s.item_id == "3" for s in segments)
+    r = validate_segment(body, next(s for s in segments if s.item_id == "3"), use_arbiter=False)
+    assert r.item_id == "3"
+    assert "cross_ref_financial_note" in r.warnings
+
+
+@pytest.mark.unit
 def test_disclosure_controls_pattern_supplements_9a_when_item9_is_index() -> None:
     """Generic bank-style filing: Item 9 index row must not block real Item 9A prose."""
     html = """

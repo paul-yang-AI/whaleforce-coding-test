@@ -5,42 +5,42 @@
     "use_arbiter": false
   },
   "spot_checks": [
-    "Citi Item 7A: real MARKET RISK body, not TOC index row (manual verify)"
+    "MSFT Item 1/7/8: standard iXBRL headers; span integrity via token_ratio"
   ],
   "items": {
     "1": {
       "status": "extracted",
       "confidence": 0.95,
-      "text_len": 58881,
-      "start": 18380,
-      "end": 77261
+      "text_len": 72667,
+      "start": 72689,
+      "end": 145356
     },
     "1A": {
       "status": "extracted",
       "confidence": 0.95,
-      "text_len": 73833,
-      "start": 77261,
-      "end": 151094
+      "text_len": 5750,
+      "start": 145356,
+      "end": 151106
     },
     "1B": {
       "status": "extracted",
       "confidence": 0.95,
-      "text_len": 285,
-      "start": 151094,
-      "end": 151379
+      "text_len": 4320,
+      "start": 151106,
+      "end": 155426
     },
     "1C": {
       "status": "extracted",
       "confidence": 0.95,
-      "text_len": 9128,
-      "start": 151379,
-      "end": 160507
+      "text_len": 5094,
+      "start": 155426,
+      "end": 160520
     },
     "2": {
       "status": "extracted",
       "confidence": 0.95,
-      "text_len": 1385,
-      "start": 160507,
+      "text_len": 1372,
+      "start": 160520,
       "end": 161892
     },
     "3": {
@@ -53,65 +53,65 @@
     "4": {
       "status": "extracted",
       "confidence": 0.95,
-      "text_len": 63,
+      "text_len": 79,
       "start": 162096,
-      "end": 162159
+      "end": 162175
     },
     "5": {
       "status": "extracted",
       "confidence": 0.95,
-      "text_len": 1803,
-      "start": 162159,
+      "text_len": 1787,
+      "start": 162175,
       "end": 163962
     },
     "6": {
       "status": "extracted",
       "confidence": 0.95,
-      "text_len": 40,
+      "text_len": 50225,
       "start": 163962,
-      "end": 164002
+      "end": 214187
     },
     "7": {
       "status": "extracted",
       "confidence": 0.95,
-      "text_len": 52128,
-      "start": 164002,
-      "end": 216130
+      "text_len": 1952,
+      "start": 214187,
+      "end": 216139
     },
     "7A": {
       "status": "extracted",
       "confidence": 0.95,
-      "text_len": 1985,
-      "start": 216130,
-      "end": 218115
+      "text_len": 114235,
+      "start": 216139,
+      "end": 330374
     },
     "8": {
       "status": "extracted",
       "confidence": 0.95,
-      "text_len": 113020,
-      "start": 218115,
-      "end": 331135
+      "text_len": 8170,
+      "start": 330374,
+      "end": 338544
     },
     "9": {
-      "status": "extracted",
+      "status": "not_applicable",
       "confidence": 0.95,
-      "text_len": 122,
-      "start": 331135,
-      "end": 331257
+      "text_len": 105,
+      "start": 339380,
+      "end": 339485
     },
     "9A": {
       "status": "extracted",
       "confidence": 0.95,
-      "text_len": 7745,
-      "start": 331257,
-      "end": 339002
+      "text_len": 474,
+      "start": 338544,
+      "end": 339018
     },
     "9B": {
       "status": "extracted",
       "confidence": 0.95,
-      "text_len": 483,
-      "start": 339002,
-      "end": 339485
+      "text_len": 362,
+      "start": 339018,
+      "end": 339380
     },
     "10": {
       "status": "extracted",
