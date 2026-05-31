@@ -56,6 +56,15 @@ def _trim_search_query(query: str) -> str:
     return parts[0].strip(" '\"，。.;")
 
 
+def build_search_fallback_url(start_url: str, query: str) -> str:
+    """Generic search URL fallback: {origin}/?q={query} (DuckDuckGo, Bing, etc.)."""
+    from urllib.parse import urlencode, urlparse
+
+    parsed = urlparse(start_url)
+    base = f"{parsed.scheme}://{parsed.netloc}"
+    return f"{base}/?{urlencode({'q': query})}"
+
+
 def extract_search_query(task: str) -> str | None:
     """Extract a search/query string from free-form task text."""
     quoted = re.findall(r"['\"]([^'\"]+)['\"]", task)

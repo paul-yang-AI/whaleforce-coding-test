@@ -566,8 +566,13 @@ def _dedupe_segments_by_item(
     return sorted(best.values(), key=lambda s: s.start)
 
 
+class SpanIntegrityError(ValueError):
+    """Raised when extracted text does not match body[start:end] (zero-hallucination contract)."""
+
+
 def assert_span_integrity(body: str, start: int, end: int, text: str) -> None:
-    assert body[start:end] == text, f"span mismatch: {body[start:end]!r} != {text!r}"
+    if body[start:end] != text:
+        raise SpanIntegrityError(f"span mismatch: {body[start:end]!r} != {text!r}")
 
 
 def _normalize_item_id(raw: str) -> str:

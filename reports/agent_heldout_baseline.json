@@ -8,11 +8,11 @@
       "status": "failed",
       "failure_category": "max_steps",
       "steps": 15,
-      "elapsed_s": 55.7,
+      "elapsed_s": 49.83,
       "recovery_count": 0,
       "llm_calls": 14,
       "silent_failure": 0,
-      "usd_per_task": 0.0249,
+      "usd_per_task": 0.0199,
       "extracted_result_preview": "",
       "error": "Max steps reached without task completion"
     },
@@ -23,12 +23,12 @@
       "split": "heldout",
       "status": "failed",
       "failure_category": "max_steps",
-      "steps": 15,
-      "elapsed_s": 86.23,
-      "recovery_count": 14,
-      "llm_calls": 14,
+      "steps": 12,
+      "elapsed_s": 73.71,
+      "recovery_count": 10,
+      "llm_calls": 12,
       "silent_failure": 0,
-      "usd_per_task": 0.0318,
+      "usd_per_task": 0.03,
       "extracted_result_preview": "",
       "error": "Max steps reached without task completion"
     },
@@ -40,12 +40,12 @@
       "status": "success",
       "failure_category": "ok",
       "steps": 3,
-      "elapsed_s": 23.23,
+      "elapsed_s": 8.11,
       "recovery_count": 0,
       "llm_calls": 2,
       "silent_failure": 0,
-      "usd_per_task": 0.0038,
-      "extracted_result_preview": "The form was successfully submitted with sample data. Response: {\"form\": {\"comments\": \"\", \"custemail\": \"\", \"custname\": \"John Doe\", \"custtel\": \"\", \"delivery\": \"\"",
+      "usd_per_task": 0.0031,
+      "extracted_result_preview": "Form submitted successfully to https://httpbin.org/post with sample data: { \"custname\": \"John Doe\" }.",
       "error": null
     },
     {
@@ -56,18 +56,34 @@
       "status": "success",
       "failure_category": "ok",
       "steps": 2,
-      "elapsed_s": 2.93,
+      "elapsed_s": 3.63,
       "recovery_count": 0,
       "llm_calls": 1,
       "silent_failure": 0,
-      "usd_per_task": 0.0029,
-      "extracted_result_preview": "Python documentation is visible. The page displays 'Python 3.14.5 documentation' and states 'Welcome! This is the official documentation for Python 3.14.5.' Doc",
+      "usd_per_task": 0.003,
+      "extracted_result_preview": "Python documentation is visible on the page. The content includes 'Python 3.14.5 documentation' and a 'Welcome!' message stating it is the 'official documentati",
+      "error": null
+    },
+    {
+      "task_id": "quotes_heldout",
+      "domain": "quotes.toscrape.com",
+      "task_type": "extract",
+      "split": "heldout",
+      "status": "success",
+      "failure_category": "ok",
+      "steps": 2,
+      "elapsed_s": 3.27,
+      "recovery_count": 0,
+      "llm_calls": 1,
+      "silent_failure": 0,
+      "usd_per_task": 0.0021,
+      "extracted_result_preview": "\u201cThe world as we have created it is a process of our thinking. It cannot be changed without changing our thinking.\u201d",
       "error": null
     }
   ],
   "summary": {
-    "heldout_tasks": 4,
-    "heldout_ok": 2,
-    "heldout_strict_ok": 2
+    "heldout_tasks": 5,
+    "heldout_ok": 3,
+    "heldout_strict_ok": 3
   }
 }

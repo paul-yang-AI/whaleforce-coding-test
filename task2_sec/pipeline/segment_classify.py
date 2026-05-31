@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import enum
+import logging
 import os
+
+logger = logging.getLogger(__name__)
 
 from task2_sec.pipeline.content_quality import is_cross_reference_index, is_likely_toc_stub
 from task2_sec.pipeline.segment import is_page_reference_text
@@ -71,11 +74,11 @@ def classify_segment_text_with_llm(
             messages=[{"role": "user", "content": prompt}],
             run_id=run_id,
             task_type="filing",
-            response_model=SegmentClassDecision,
+            schema=SegmentClassDecision,
             max_tokens=128,
         )
         if isinstance(raw, SegmentClassDecision):
             return SegmentClass(raw.klass)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("sec_segment_classify LLM failed for item %s: %s", item_id, exc)
     return base

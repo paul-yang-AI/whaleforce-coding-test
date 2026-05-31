@@ -58,11 +58,13 @@ tasks:
   - id: brkb_heldout_nav
     domain: sec.gov
     task_type: navigate
-    description: "Navigate to SEC EDGAR and search for Berkshire Hathaway filings."
-    start_url: https://www.sec.gov/cgi-bin/browse-edgar
+    description: "Open SEC EDGAR company page for Berkshire Hathaway and verify 10-K filings are listed."
+    start_url: https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001067983&type=10-K
     split: heldout
     success_hints:
       expect_body_contains: "Berkshire"
+      expect_url_contains: "browse-edgar"
+    notes: "Context scaffolding (CIK start URL); no ticker branch in code; avoids browse-edgar search rate-limit."
 
   - id: forms_heldout
     domain: httpbin.org
@@ -84,3 +86,13 @@ tasks:
     success_hints:
       expect_body_contains: "Python"
     notes: "Frozen held-out — do not tune agent_plan prompt for this task after adding."
+
+  - id: quotes_heldout
+    domain: quotes.toscrape.com
+    task_type: extract
+    description: "Extract the text of the first quote on the page."
+    start_url: https://quotes.toscrape.com/
+    split: heldout
+    success_hints:
+      expect_body_contains: "quote"
+    notes: "Domain diversity held-out; static HTML, no consent. Not used for prompt tuning."

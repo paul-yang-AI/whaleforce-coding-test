@@ -463,9 +463,9 @@ with tab_limits:
 | 狀態 | 範例 |
 |------|------|
 | ✅ Train 通過 | example.com、httpbin extract、Wikipedia search、HN、GitHub |
-| ✅ Held-out 通過 | httpbin form、python docs（2/4 基線；無 silent failure） |
+| ✅ Held-out 通過 | httpbin form、python docs、quotes（3/5 基線） |
 | ⚠️ Agent held-out gap | SEC EDGAR max_steps、DDG search max_steps |
-| ⚠️ Held-out / demo | DuckDuckGo search（max_steps）；SEC EDGAR（max_steps / rate-limit） |
+| ⚠️ Held-out / demo | DuckDuckGo search、SEC EDGAR（max_steps）；誠實 gap |
 | ⚠️ 不建議 demo | **Google 搜尋**（consent/動態 DOM → type 迴圈；agent 會 stuck 偵測後 fail） |
 | 🚫 不支援 | 登入/CAPTCHA、PDF URL、iframe/shadow DOM、**生成式摘要**（僅抽取頁面文字） |
 | ⚠️ 基礎設施 | Gemini 503 → `plan_failed`（已加 infra 重試） |

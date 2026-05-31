@@ -452,3 +452,15 @@
   - README「自我維護」小節
 - **驗證**：agent held-out **2/4** ok（forms + python_docs）；brkb **max_steps**（誠實 fail）；DDG max_steps；
   `test_agent_verify` 新增 failure-claim tests；SEC with_llm baseline 已寫入 reports。
+
+### `a_plus_credibility_and_heldout_3of5`（2026-05-31）
+
+- **Phase A（可信度）**：
+  - `segment_classify.py`：`response_model` → `schema`（修靜默失效）；exception 改 log
+  - `assert_span_integrity` → `raise SpanIntegrityError`（`-O` 安全）
+  - `PLAN.md` / `README` 數字 drift 修正（6/8、173 tests）；fallback README 對齊
+- **Phase B（Agent 3/5）**：
+  - brkb CIK company page scaffolding + 更新 description
+  - search `?q=` URL fallback on type-loop stuck（`intent.build_search_fallback_url` + `loop.py`）
+  - 新增 `quotes_heldout`（domain diversity；static HTML）
+- **驗證**：agent held-out **3/5** ok；`silent_failure=0`；unit + regression PASS

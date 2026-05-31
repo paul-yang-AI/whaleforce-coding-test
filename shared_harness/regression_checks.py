@@ -63,8 +63,8 @@ def verify_sec_heldout_summary(summary: dict[str, Any]) -> tuple[bool, str]:
 def verify_agent_heldout_summary(summary: dict[str, Any]) -> tuple[bool, str]:
     ok = int(summary.get("heldout_ok", 0))
     total = int(summary.get("heldout_tasks", 0))
-    if total < 4:
-        return False, f"heldout_tasks={total}, expected 4"
-    if ok < 2:
-        return False, f"heldout_ok={ok}/{total}, expected >= 2/4 (forms + python_docs baseline)"
+    if total < 5:
+        return False, f"heldout_tasks={total}, expected >= 5"
+    if ok < 3:
+        return False, f"heldout_ok={ok}/{total}, expected >= 3/5 (A+ baseline)"
     return True, f"{ok}/{total} failure_category=ok"

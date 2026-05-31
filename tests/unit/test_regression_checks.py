@@ -72,7 +72,7 @@ def test_verify_sec_heldout_summary() -> None:
 
 @pytest.mark.unit
 def test_verify_agent_heldout_summary() -> None:
-    ok, _ = verify_agent_heldout_summary({"heldout_tasks": 4, "heldout_ok": 2})
+    ok, _ = verify_agent_heldout_summary({"heldout_tasks": 5, "heldout_ok": 3})
     assert ok
-    ok2, _ = verify_agent_heldout_summary({"heldout_tasks": 4, "heldout_ok": 1})
+    ok2, _ = verify_agent_heldout_summary({"heldout_tasks": 5, "heldout_ok": 2})
     assert not ok2

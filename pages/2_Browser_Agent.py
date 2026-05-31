@@ -553,7 +553,7 @@ with col_info2:
 - ✅ 內容/資料抽取
 - ✅ 資訊查詢（新聞、維基）
 - ✅ 搜尋任務（Wikipedia 等 train 任務）
-- ✅ Held-out 任務見「泛化驗證」分頁（2/4 離線基線：forms + python_docs）
+- ✅ Held-out 任務見「泛化驗證」分頁（3/5 離線基線：forms + python_docs + quotes）
 - ✅ 多步驟互動
 
 **已知限制：**

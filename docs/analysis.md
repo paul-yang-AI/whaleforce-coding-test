@@ -300,17 +300,18 @@ Train KPI 路徑仍 **Tier0-only（$0/filing）**。LLM 路徑可經 eval flags 
 | 指標 | Train | Held-out |
 |------|-------|----------|
 | Tasks | 5 | 4 |
-| Success / ok | 100% (5/5) | **2/4**（forms + python_docs；無 silent failure） |
+| Success / ok | 100% (5/5) | **3/5**（forms + python_docs + quotes；無 silent failure） |
 | Silent failures | 0 | 0 |
 
-**Held-out 細節**（Playwright + LLM）：
+**Held-out 細節**（5 tasks，Playwright + LLM）：
 
 | Task | failure_category | 備註 |
 |------|------------------|------|
-| python_docs_heldout | ok | frozen prompt；`success_hints` body check |
-| forms_heldout | ok | 自動 Submit + `expect_url_contains: /post` |
-| brkb_heldout_nav | max_steps | SEC rate-limit；已修假成功（verify + success_hints） |
-| duckduckgo_search | max_steps | consent/SERP；`expect_url_contains: q=` |
+| python_docs_heldout | ok | frozen prompt |
+| forms_heldout | ok | 自動 Submit + `/post` |
+| quotes_heldout | ok | 靜態 HTML extract；domain diversity |
+| brkb_heldout_nav | max_steps | CIK scaffolding；SEC headless 仍 flaky |
+| duckduckgo_search | max_steps | consent/SERP stress；`?q=` fallback 已加 |
 
 **P0 修復（2026-05-29）：** 移除 planner「卡住就 done=true」；`verify_task_outcome` 拒絕 blocked/could not/rate limit；navigate `success_hints` + eval silent 雙重檢查。brkb 不再假 success。
 

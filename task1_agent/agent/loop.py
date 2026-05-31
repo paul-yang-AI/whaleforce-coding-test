@@ -152,6 +152,34 @@ def _terminal_verify_kwargs(task_meta: dict | None) -> dict:
     }
 
 
+def _attempt_search_url_fallback(
+    *,
+    step_index: int,
+    task_description: str,
+    start_url: str,
+    run_id: str,
+    executor: "ActionExecutor",
+) -> StepResult | None:
+    """Navigate to ?q= when type loop stuck — generic, not site-specific."""
+    from task1_agent.agent.intent import build_search_fallback_url, extract_search_query, task_implies_search
+
+    if not task_implies_search(task_description):
+        return None
+    query = extract_search_query(task_description)
+    if not query:
+        return None
+    target = build_search_fallback_url(start_url, query)
+    return executor(
+        "search_url_fallback",
+        {
+            "step": step_index,
+            "task": task_description,
+            "start_url": start_url,
+            "planned_action": {"action": "navigate", "value": target},
+        },
+    )
+
+
 def run(
     *,
     task_description: str,
@@ -168,6 +196,7 @@ def run(
     """
     job_store.mark_run(run_id, "running")
     result = RunResult(run_id=run_id)
+    search_fallback_used = False
 
     executor = execute_action or _noop_executor
     max_steps = infer_max_steps(task_description)
@@ -276,6 +305,34 @@ def run(
                     continue
                 else:
                     if _is_stuck_type_loop(result.steps):
+                        if not search_fallback_used:
+                            fb = _attempt_search_url_fallback(
+                                step_index=step_idx,
+                                task_description=task_description,
+                                start_url=start_url,
+                                run_id=run_id,
+                                executor=executor,
+                            )
+                            if fb is not None:
+                                search_fallback_used = True
+                                result.steps.append(fb)
+                                job_store.insert_step(
+                                    run_id,
+                                    step_idx,
+                                    action=fb.action,
+                                    status="success" if fb.verify.passed else "failed",
+                                    log_json=json.dumps(
+                                        {
+                                            "url": fb.url,
+                                            "action": fb.action,
+                                            "error": fb.error,
+                                            "task": task_description,
+                                        },
+                                        default=str,
+                                    ),
+                                )
+                                if fb.verify.passed:
+                                    continue
                         result.status = "failed"
                         result.error = (
                             "Agent stuck: repeated type actions without page change. "

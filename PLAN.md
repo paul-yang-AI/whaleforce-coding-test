@@ -35,7 +35,7 @@ RUN_BUDGET_USD=20
 - **Phase 0–3**: scaffold → SEC pipeline + UI → agent loop + recovery → docs, Zeabur, L3 eval (see `git log`)
 - **P0**: eval honesty — `content_quality.py`, strict required-item check, `toc_stub_required_item`
 - **P1–P2**: Tier0 robustness; surgical LLM — `segment_classify.py`, arbiter, `--tier0-only` / `--with-llm`
-- **Eval expansion**: 11-filing manifest; `heldout_baseline.json` (5/8 ok); honest JPM / AAPL / KSCP gaps
+- **Eval expansion**: 11-filing manifest; `heldout_baseline.json` (**6/8** ok); honest JPM / AAPL / KSCP gaps
 - **Prompts audit**: `prompts/README.md`, ITERATION entries, arbiter SOP sync
 - **UI presentation**: SEC Train / Held-out / Custom tabs; Eval held-out baseline tab
 - **Harness hardening (Phase 1)**: per-task Playwright context reset; `llm_budget_guard`; `litellm.completion_cost`; `SQLITE_JOURNAL_MODE`
