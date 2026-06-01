@@ -35,6 +35,15 @@
 - [x] `python scripts/demo_circuit_breaker.py` — budget demo
 - [x] `.env` not tracked (`git ls-files .env` empty)
 
+### Automated pre-check (local, 2026-06-01)
+
+- [x] `python scripts/e2e_smoke.py` — 6/6 PASS
+- [x] `python scripts/run_private_regression.py --skip-pytest --skip-smoke` — SEC 3/3, held-out 6/8, agent 3/5
+- [x] `reports/eval_train.csv` — 8 rows (3 SEC + 5 agent); `heldout_baseline.json` with `with_llm`
+- [x] Zeabur health `/_stcore/health` → HTTP 200
+
+手動瀏覽器步驟見 [docs/ZEABUR_SMOKE.md](docs/ZEABUR_SMOKE.md).
+
 ### Zeabur smoke (after push → auto redeploy)
 - [ ] **Browser Agent**: preset "Navigate to Example.com" → Run → Refresh → `success` + **Result** block
 - [ ] **Browser Agent**: preset "Hacker News" → verify multi-step + extracted title
@@ -49,7 +58,7 @@
 
 ### GitHub
 - [x] Push latest commits: `git push origin master`
-- [ ] **Settings → Change visibility → Public** (required by test brief)
+- [x] **Settings → Change visibility → Public** (required by test brief)
 - [x] Verify no secrets in history (`.env` never committed; history scan clean)
 
 ### Email to Whaleforce
